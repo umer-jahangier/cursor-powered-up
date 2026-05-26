@@ -44,9 +44,9 @@ agentmemory
 
 ---
 
-## Step 4 — 21st.dev MCP (optional — UI components)
+## Step 4 — 21st.dev MCP — UI components
 
-[21st.dev](https://21st.dev) provides an MCP server that lets Cursor agents generate polished React UI components on demand, with built-in [framer-motion](https://www.framer.com/motion/) animations and modern design patterns.
+[21st.dev](https://21st.dev) provides an MCP server that lets Cursor agents generate polished React UI components on demand. This is **required for full UI power** — without it, agents cannot leverage the design-system skills installed in `~/.cursor/skills/`.
 
 **This step requires your own 21st.dev API key** (free tier available). Get one at [21st.dev dashboard](https://21st.dev).
 
@@ -55,6 +55,9 @@ npx -y @21st-dev/cli@latest install cursor --api-key "YOUR_21ST_DEV_API_KEY"
 ```
 
 Replace `YOUR_21ST_DEV_API_KEY` with your actual key. The CLI writes the MCP entry to `~/.cursor/mcp.json` automatically.
+
+**After running the command:** restart Cursor, then verify the server is active:
+> Cursor Settings → MCP → confirm the **21st** server shows green.
 
 ### What 21st.dev unlocks
 
@@ -65,26 +68,31 @@ Replace `YOUR_21ST_DEV_API_KEY` with your actual key. The CLI writes the MCP ent
 | Tailwind + shadcn-compatible output | Integrates cleanly with modern stacks |
 | Design system coherence | Consistent tokens across generated components |
 
-### framer-motion in your project
+The following skills already installed at `~/.cursor/skills/` pair naturally with 21st.dev:
 
-When using 21st.dev-generated components, ensure `framer-motion` is in your project:
+- `design-taste-frontend` — high-agency interfaces with calibrated color and motion
+- `high-end-visual-design` — agency-grade premium interfaces
+- `gpt-taste` — GSAP-heavy pages with wide hero typography and bento grids
+- `stitch-design-taste` — design systems with motion intent
+
+---
+
+## Step 5 — Framer Motion (for animated React UI)
+
+21st.dev-generated components use [framer-motion](https://www.framer.com/motion/) for animations. Install it in each React/Next.js project when you start a frontend phase:
 
 ```bash
+# In your React/Next project after /gsd-new-project:
 npm install framer-motion
 # or
 pnpm add framer-motion
 ```
 
-The following skills already installed at `~/.cursor/skills/` pair naturally with 21st.dev:
-
-- `design-taste-frontend` — high-agency interfaces with calibrated color and motion
-- `high-end-visual-design` — agency-grade premium interfaces
-- `gpt-taste` — GSAP-heavy pages with bento grids
-- `stitch-design-taste` — design systems with motion intent
+> Tip: add this as the first task in any frontend GSD phase plan — it's a one-liner that unlocks all motion presets from 21st.dev components.
 
 ---
 
-## Step 5 — Bootstrap each project
+## Step 6 — Bootstrap each project
 
 For a **new project**:
 
@@ -102,7 +110,7 @@ This runs CodeGraph indexing and GitNexus analysis, creating `.codegraph/` and `
 
 ---
 
-## Step 6 — Verify the full setup
+## Step 7 — Verify the full setup
 
 ```bash
 bash ~/.cursor/skills/cursor-powerup/scripts/verify-setup.sh
@@ -114,7 +122,7 @@ Or check manually:
 # Tools installed
 which agentmemory codegraph agnix gitnexus
 
-# MCP wired
+# MCP wired (should include agentmemory, playwright, github, 21st)
 cat ~/.cursor/mcp.json
 
 # Skills installed
@@ -129,10 +137,11 @@ curl -sf http://localhost:3111/agentmemory/health && echo "agentmemory OK" || ec
 ## Quick-reference checklist
 
 ```
-[ ] Cursor restarted
+[ ] Cursor restarted (after install.sh)
 [ ] PATH + GITHUB_PERSONAL_ACCESS_TOKEN in ~/.zshrc
-[ ] agentmemory running in a terminal
-[ ] (optional) 21st.dev MCP installed with your API key
+[ ] agentmemory running in a terminal each session
+[ ] 21st.dev MCP installed — Cursor Settings → MCP → 21st = green
+[ ] framer-motion added to React projects (npm install framer-motion)
 [ ] /gsd-new-project or /gsd-map-codebase run in each repo
 [ ] verify-setup.sh passes
 ```

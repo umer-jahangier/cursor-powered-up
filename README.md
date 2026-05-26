@@ -27,6 +27,21 @@ That's it. The installer handles everything — see [what it does](#what-the-ins
 
 ---
 
+## Power stack
+
+`install.sh` installs the **core stack** automatically. The **full power** stack adds UI generation and requires your own API key — follow [docs/POST-INSTALL.md](./docs/POST-INSTALL.md) after the installer finishes.
+
+| Layer | Tool | Install |
+|-------|------|---------|
+| Agent memory | agentmemory MCP | Auto (`install.sh`) |
+| Browser automation | Playwright MCP | Auto (`install.sh`) |
+| GitHub integration | GitHub MCP | Auto (`install.sh`) |
+| Codebase graph | CodeGraph + GitNexus | Auto (`install.sh`) |
+| GSD workflows | 27 `/gsd-*` commands | Auto (`install.sh`) |
+| Safe skills bundle | antigravity dev/backend/frontend/security | Auto (`install.sh`) |
+| **21st.dev MCP** | **UI component generation** | **Post-install (your API key) — see [POST-INSTALL.md §4](./docs/POST-INSTALL.md#step-4--21stdev-mcp--ui-components)** |
+| **Framer Motion** | **Animation library for React UI** | **Per-project `npm i framer-motion`; 21st.dev MCP outputs use it — see [POST-INSTALL.md §5](./docs/POST-INSTALL.md#step-5--framer-motion-for-animated-react-ui)** |
+
 ## What the installer does
 
 | Phase | Action |
@@ -41,7 +56,7 @@ That's it. The installer handles everything — see [what it does](#what-the-ins
 | 8 | Shallow-clone reference repos to `~/.cursor/repos/` |
 | 9 | Install / verify `gitnexus` (falls back to `npx gitnexus`) |
 | 10 | `chmod` scripts, write `~/.cursor/POWERUP-INSTALLED.md` |
-| 11 | Print final checklist (restart Cursor, set PAT, run `agentmemory`) |
+| 11 | Print full-power banner pointing to POST-INSTALL.md |
 
 ### Still manual (cannot be automated without asking)
 
@@ -52,9 +67,13 @@ That's it. The installer handles everything — see [what it does](#what-the-ins
    ```
 2. **Every coding session** — run `agentmemory` in a terminal (keep it open).
 3. **Restart Cursor** after first install.
-4. **21st.dev MCP** (optional — AI-generated React UI with framer-motion): install with your own free API key from [21st.dev](https://21st.dev):
+4. **21st.dev MCP** — required for full UI power. Install with your own free API key from [21st.dev](https://21st.dev):
    ```bash
    npx -y @21st-dev/cli@latest install cursor --api-key "YOUR_21ST_DEV_API_KEY"
+   ```
+5. **Framer Motion** — install per React project when starting frontend phases:
+   ```bash
+   npm install framer-motion
    ```
 
 See the full walkthrough in **[docs/POST-INSTALL.md](./docs/POST-INSTALL.md)**.

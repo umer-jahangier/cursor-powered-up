@@ -476,40 +476,21 @@ EOF
 ok "Wrote ~/.cursor/POWERUP-INSTALLED.md"
 
 # =============================================================================
-# PHASE 11 — Final checklist
+# PHASE 11 — Full power banner
 # =============================================================================
-phase 11 "Final checklist"
+phase 11 "Full power banner"
 
 echo ""
 echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════╗${NC}"
 echo -e "${GREEN}${BOLD}║   cursor-powered-up  installed!          ║${NC}"
 echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════╝${NC}"
 echo ""
-echo -e "${YELLOW}${BOLD}Manual steps required:${NC}"
-echo ""
-echo -e "  ${BOLD}1. Add to ~/.zshrc (then: source ~/.zshrc):${NC}"
-echo '     export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"'
-echo '     export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_your_token_here'
-echo ""
-echo -e "  ${BOLD}2. Every coding session — run in a terminal (keep open):${NC}"
-echo "     agentmemory"
-echo ""
-echo -e "  ${BOLD}3. Restart Cursor IDE${NC} (for MCP + hooks to take effect)"
-echo ""
-echo -e "  ${BOLD}4. (Optional) 21st.dev MCP — AI React UI + framer-motion:${NC}"
-echo "     Get a free API key at https://21st.dev, then:"
-echo '     npx -y @21st-dev/cli@latest install cursor --api-key "YOUR_21ST_DEV_API_KEY"'
-echo ""
-echo -e "  ${BOLD}5. Per project:${NC}"
-echo "     /gsd-new-project   ← first time"
-echo "     /gsd-map-codebase  ← brownfield projects"
-echo ""
-echo -e "  ${BOLD}6. To verify setup:${NC}"
-echo "     bash ~/.cursor/skills/cursor-powerup/scripts/verify-setup.sh"
-echo "     cat ~/.cursor/POWERUP-INSTALLED.md"
-echo "     which agentmemory codegraph agnix"
-echo "     cat ~/.cursor/mcp.json"
-echo ""
-echo -e "  ${BOLD}Full post-install guide:${NC} docs/POST-INSTALL.md"
-echo "  ${BOLD}Docs:${NC} docs/PORTABLE-SETUP.md"
+echo -e "${YELLOW}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${YELLOW}${BOLD} FULL POWER — complete these steps (required for 21st.dev + UI):${NC}"
+echo -e "${YELLOW}${BOLD} See: docs/POST-INSTALL.md in this repo${NC}"
+echo -e "${YELLOW}   • 21st.dev MCP (your API key)${NC}"
+echo -e "${YELLOW}   • framer-motion in React projects${NC}"
+echo -e "${YELLOW}   • GITHUB_PERSONAL_ACCESS_TOKEN${NC}"
+echo -e "${YELLOW}   • agentmemory each session${NC}"
+echo -e "${YELLOW}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""

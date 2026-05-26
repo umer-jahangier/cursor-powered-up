@@ -14,11 +14,15 @@ Run during `/gsd-new-project` Phase 1.5 and when onboarding any repo. Global too
 
 **agentmemory:** User must run `agentmemory` in a terminal (global server). Remind once if health check fails.
 
-## Optional MCP: 21st.dev (UI components + framer-motion)
+## Full power stack (post-install)
 
-21st.dev is **not auto-installed** by `install.sh` because it requires the user's own API key. It is an optional post-install step.
+`install.sh` installs the core stack automatically. Two additional steps unlock **full UI power** and must be completed manually — see **[docs/POST-INSTALL.md Steps 4–5](../../docs/POST-INSTALL.md#step-4--21stdev-mcp--ui-components)** for the complete walkthrough.
 
-When available, it enables Cursor agents to generate production-ready React components with:
+### Step 4 — 21st.dev MCP (your API key required)
+
+21st.dev is **not auto-installed** by `install.sh` because it requires the user's own API key.
+
+When active, it enables Cursor agents to generate production-ready React components with:
 - [framer-motion](https://www.framer.com/motion/) animation patterns baked in
 - Tailwind + shadcn-compatible output
 - Design-system-coherent tokens
@@ -29,7 +33,7 @@ When available, it enables Cursor agents to generate production-ready React comp
 npx -y @21st-dev/cli@latest install cursor --api-key "YOUR_21ST_DEV_API_KEY"
 ```
 
-Keys available at [21st.dev](https://21st.dev). The CLI writes the MCP entry to `~/.cursor/mcp.json`.
+Keys available at [21st.dev](https://21st.dev). The CLI writes the MCP entry to `~/.cursor/mcp.json`. Restart Cursor afterwards and verify: **Cursor Settings → MCP → 21st = green**.
 
 **Frontend skills that pair with 21st.dev** (already installed at `~/.cursor/skills/`):
 - `design-taste-frontend` — high-agency UI with calibrated color and motion
@@ -37,7 +41,10 @@ Keys available at [21st.dev](https://21st.dev). The CLI writes the MCP entry to 
 - `gpt-taste` — GSAP-heavy pages with wide hero typography and bento grids
 - `stitch-design-taste` — design systems with motion intent
 
-**framer-motion project setup:**
+### Step 5 — Framer Motion (per React project)
+
+21st.dev components use [framer-motion](https://www.framer.com/motion/). Install once per React/Next project when starting a frontend phase:
+
 ```bash
 npm install framer-motion   # or: pnpm add framer-motion
 ```

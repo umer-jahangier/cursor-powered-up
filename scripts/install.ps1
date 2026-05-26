@@ -394,34 +394,21 @@ Set-Content (Join-Path $CursorDir "POWERUP-INSTALLED.md") $installedMd -Encoding
 Ok "Wrote ~/.cursor/POWERUP-INSTALLED.md"
 
 # =============================================================================
-# PHASE 11 — Final checklist
+# PHASE 11 — Full power banner
 # =============================================================================
-Phase 11 "Final checklist"
+Phase 11 "Full power banner"
 
 Write-Host ""
 Write-Host "╔══════════════════════════════════════════╗" -ForegroundColor Green
 Write-Host "║   cursor-powered-up  installed!          ║" -ForegroundColor Green
 Write-Host "╚══════════════════════════════════════════╝" -ForegroundColor Green
 Write-Host ""
-Write-Host "Manual steps required:" -ForegroundColor Yellow
-Write-Host ""
-Write-Host "  1. Set your GitHub PAT in PowerShell profile (then restart terminal):" -ForegroundColor White
-Write-Host '     $env:GITHUB_PERSONAL_ACCESS_TOKEN = "ghp_your_token_here"' -ForegroundColor Gray
-Write-Host '     Add-Content $PROFILE "`n`$env:GITHUB_PERSONAL_ACCESS_TOKEN = ''ghp_your_token_here''"'  -ForegroundColor Gray
-Write-Host ""
-Write-Host "  2. Every coding session — run in a terminal (keep open):" -ForegroundColor White
-Write-Host "     agentmemory" -ForegroundColor Gray
-Write-Host ""
-Write-Host "  3. Restart Cursor IDE (for MCP + hooks to take effect)" -ForegroundColor White
-Write-Host ""
-Write-Host "  4. Per project:" -ForegroundColor White
-Write-Host "     /gsd-new-project   <- first time" -ForegroundColor Gray
-Write-Host "     /gsd-map-codebase  <- brownfield projects" -ForegroundColor Gray
-Write-Host ""
-Write-Host "  5. To verify:" -ForegroundColor White
-Write-Host "     Get-Content ~/.cursor/POWERUP-INSTALLED.md" -ForegroundColor Gray
-Write-Host "     where.exe agentmemory codegraph agnix" -ForegroundColor Gray
-Write-Host "     Get-Content ~/.cursor/mcp.json" -ForegroundColor Gray
-Write-Host ""
-Write-Host "  Docs: docs/PORTABLE-SETUP.md" -ForegroundColor White
+Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Yellow
+Write-Host " FULL POWER — complete these steps (required for 21st.dev + UI):" -ForegroundColor Yellow
+Write-Host " See: docs/POST-INSTALL.md in this repo" -ForegroundColor Yellow
+Write-Host "   • 21st.dev MCP (your API key)" -ForegroundColor Yellow
+Write-Host "   • framer-motion in React projects" -ForegroundColor Yellow
+Write-Host "   • GITHUB_PERSONAL_ACCESS_TOKEN" -ForegroundColor Yellow
+Write-Host "   • agentmemory each session" -ForegroundColor Yellow
+Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Yellow
 Write-Host ""
