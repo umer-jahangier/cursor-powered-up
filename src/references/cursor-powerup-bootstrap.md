@@ -10,8 +10,37 @@ Run during `/gsd-new-project` Phase 1.5 and when onboarding any repo. Global too
 | GSD commands `~/.cursor/commands/gsd/` | GitNexus graph + `AGENTS.md` |
 | MCP `~/.cursor/mcp.json` | `.cursor/rules/*.mdc` |
 | agentmemory, Playwright, GitHub MCP | `.planning/CURSOR-POWERUP.md` status |
+| 21st.dev MCP (optional, user API key) | — |
 
 **agentmemory:** User must run `agentmemory` in a terminal (global server). Remind once if health check fails.
+
+## Optional MCP: 21st.dev (UI components + framer-motion)
+
+21st.dev is **not auto-installed** by `install.sh` because it requires the user's own API key. It is an optional post-install step.
+
+When available, it enables Cursor agents to generate production-ready React components with:
+- [framer-motion](https://www.framer.com/motion/) animation patterns baked in
+- Tailwind + shadcn-compatible output
+- Design-system-coherent tokens
+
+**Install command (user runs once, their own key):**
+
+```bash
+npx -y @21st-dev/cli@latest install cursor --api-key "YOUR_21ST_DEV_API_KEY"
+```
+
+Keys available at [21st.dev](https://21st.dev). The CLI writes the MCP entry to `~/.cursor/mcp.json`.
+
+**Frontend skills that pair with 21st.dev** (already installed at `~/.cursor/skills/`):
+- `design-taste-frontend` — high-agency UI with calibrated color and motion
+- `high-end-visual-design` — agency-grade premium interfaces
+- `gpt-taste` — GSAP-heavy pages with wide hero typography and bento grids
+- `stitch-design-taste` — design systems with motion intent
+
+**framer-motion project setup:**
+```bash
+npm install framer-motion   # or: pnpm add framer-motion
+```
 
 ## Bootstrap checklist (execute with Bash)
 

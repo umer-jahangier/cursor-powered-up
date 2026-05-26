@@ -23,6 +23,8 @@ cd cursor-powered-up
 
 That's it. The installer handles everything — see [what it does](#what-the-installer-does) below.
 
+> **After install:** follow **[docs/POST-INSTALL.md](./docs/POST-INSTALL.md)** to set your GitHub PAT, start agentmemory, and optionally enable the [21st.dev MCP](./docs/POST-INSTALL.md#step-4--21stdev-mcp-optional--ui-components) for AI-generated React UI components (requires your own free API key).
+
 ---
 
 ## What the installer does
@@ -50,6 +52,12 @@ That's it. The installer handles everything — see [what it does](#what-the-ins
    ```
 2. **Every coding session** — run `agentmemory` in a terminal (keep it open).
 3. **Restart Cursor** after first install.
+4. **21st.dev MCP** (optional — AI-generated React UI with framer-motion): install with your own free API key from [21st.dev](https://21st.dev):
+   ```bash
+   npx -y @21st-dev/cli@latest install cursor --api-key "YOUR_21ST_DEV_API_KEY"
+   ```
+
+See the full walkthrough in **[docs/POST-INSTALL.md](./docs/POST-INSTALL.md)**.
 
 ---
 
@@ -90,6 +98,7 @@ That's it. The installer handles everything — see [what it does](#what-the-ins
 
 | Document | Description |
 |----------|-------------|
+| [docs/POST-INSTALL.md](./docs/POST-INSTALL.md) | **Post-install guide** — PAT, agentmemory, 21st.dev MCP, project bootstrap |
 | [docs/PORTABLE-SETUP.md](./docs/PORTABLE-SETUP.md) | New machine restore guide |
 | [docs/GSD-CURSOR-ADAPTATION.md](./docs/GSD-CURSOR-ADAPTATION.md) | Technical adaptation details |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history |
