@@ -1,19 +1,19 @@
-# Post-Install Guide — Enable Full Cursor Power
+# Post-Install Guide — Enable Full Power
 
-> Run these steps **after** `./scripts/install.sh` completes (or `.\scripts\install.ps1` on Windows).
+> Run these steps **after** `./scripts/install.sh` completes.
 > The installer handles all the heavy lifting; these are the manual steps that require your own credentials and preferences.
 
 ---
 
-## Step 1 — Restart Cursor
+## Step 1 — Restart Your IDE
 
-The new MCP servers (agentmemory, playwright, github) and hooks only activate after a full restart.
+The new MCP servers (agentmemory, playwright, github) only activate after a full restart.
 
-**Close and reopen Cursor** before continuing.
+**Close and reopen your IDE** before continuing.
 
 ---
 
-## Step 2 — Set environment variables
+## Step 2 — Set Environment Variables
 
 Add to `~/.zshrc` (macOS/Linux) or `~/.bashrc` (Linux):
 
@@ -32,7 +32,7 @@ Get a GitHub PAT at [github.com/settings/tokens](https://github.com/settings/tok
 
 ---
 
-## Step 3 — Start agentmemory each session
+## Step 3 — Start agentmemory Each Session
 
 The agent memory server must be running for the memory MCP to work. Run this in a terminal and keep it open:
 
@@ -44,56 +44,41 @@ agentmemory
 
 ---
 
-## Step 4 — 21st.dev MCP — UI components
+## Step 4 — 21st.dev MCP — UI Components
 
-[21st.dev](https://21st.dev) provides an MCP server that lets Cursor agents generate polished React UI components on demand. This is **required for full UI power** — without it, agents cannot leverage the design-system skills installed in `~/.cursor/skills/`.
+[21st.dev](https://21st.dev) provides an MCP server that lets AI agents generate polished React UI components. **This step requires your own 21st.dev API key** (free tier available at [21st.dev dashboard](https://21st.dev)).
 
-**This step requires your own 21st.dev API key** (free tier available). Get one at [21st.dev dashboard](https://21st.dev).
+### For Cursor
 
 ```bash
 npx -y @21st-dev/cli@latest install cursor --api-key "YOUR_21ST_DEV_API_KEY"
 ```
 
-Replace `YOUR_21ST_DEV_API_KEY` with your actual key. The CLI writes the MCP entry to `~/.cursor/mcp.json` automatically.
+### For VS Code
 
-**After running the command:** restart Cursor, then verify the server is active:
-> Cursor Settings → MCP → confirm the **21st** server shows green.
+```bash
+npx -y @21st-dev/cli@latest install vscode --api-key "YOUR_21ST_DEV_API_KEY"
+```
 
-### What 21st.dev unlocks
+### For Antigravity
 
-| Capability | Notes |
-|------------|-------|
-| On-demand React component generation | Ask Cursor to "build a hero section with 21st.dev" |
-| framer-motion animation patterns | Components ship with motion presets |
-| Tailwind + shadcn-compatible output | Integrates cleanly with modern stacks |
-| Design system coherence | Consistent tokens across generated components |
+21st.dev CLI does not currently support Antigravity. Add the MCP entry manually to `mcp_config.json` if/when support is available.
 
-Skills installed by `install.sh` that pair with 21st.dev:
-
-- `ui-ux-pro-max` — **auto-installed** — 67 styles, 161 color palettes, 57 font pairings, 161 industry reasoning rules ([ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill))
-- `design-taste-frontend` — high-agency interfaces with calibrated color and motion
-- `high-end-visual-design` — agency-grade premium interfaces
-- `gpt-taste` — GSAP-heavy pages with wide hero typography and bento grids
-- `stitch-design-taste` — design systems with motion intent
+**After running the command:** restart your IDE, then verify the server is active in MCP settings.
 
 ---
 
 ## Step 5 — Framer Motion (for animated React UI)
 
-21st.dev-generated components use [framer-motion](https://www.framer.com/motion/) for animations. Install it in each React/Next.js project when you start a frontend phase:
+21st.dev-generated components use [framer-motion](https://www.framer.com/motion/) for animations. Install it in each React/Next.js project:
 
 ```bash
-# In your React/Next project after /gsd-new-project:
 npm install framer-motion
-# or
-pnpm add framer-motion
 ```
-
-> Tip: add this as the first task in any frontend GSD phase plan — it's a one-liner that unlocks all motion presets from 21st.dev components.
 
 ---
 
-## Step 6 — Bootstrap each project
+## Step 6 — Bootstrap Each Project (Cursor only)
 
 For a **new project**:
 
@@ -107,45 +92,86 @@ For an **existing codebase** (brownfield):
 /gsd-map-codebase
 ```
 
-This runs CodeGraph indexing and GitNexus analysis, creating `.codegraph/` and `AGENTS.md` in the repo.
+This runs CodeGraph indexing and GitNexus analysis.
+
+> **Note:** GSD commands are Cursor-exclusive. VS Code and Antigravity users: run `codegraph init -i` in project roots for codebase indexing.
 
 ---
 
-## Step 7 — Verify the full setup
+## Step 7 — Verify the Full Setup
 
-```bash
-bash ~/.cursor/skills/cursor-powerup/scripts/verify-setup.sh
-```
-
-Or check manually:
+### Cursor
 
 ```bash
 # Tools installed
 which agentmemory codegraph agnix gitnexus
 
-# MCP wired (should include agentmemory, playwright, github, 21st)
+# MCP wired
 cat ~/.cursor/mcp.json
 
 # Skills installed
-ls ~/.cursor/skills/
+ls ~/.cursor/skills/ | wc -l
 
 # agentmemory health
-curl -sf http://localhost:3111/agentmemory/health && echo "agentmemory OK" || echo "WARN: start agentmemory"
+curl -sf http://localhost:3111/agentmemory/health && echo "OK" || echo "WARN: start agentmemory"
+```
+
+### VS Code
+
+```bash
+# Skills installed
+ls ~/.vscode/skills/ | wc -l
+
+# MCP config (macOS)
+cat "$HOME/Library/Application Support/Code/User/mcp.json"
+
+# Enable MCP discovery in VS Code settings:
+# chat.mcp.discovery.enabled = true
+```
+
+### Antigravity
+
+```bash
+# Skills installed
+ls ~/.agents/skills/ | wc -l
+
+# MCP config (macOS)
+cat "$HOME/Library/Application Support/Antigravity/User/mcp_config.json"
 ```
 
 ---
 
-## Quick-reference checklist
+## Quick-Reference Checklist
+
+### All IDEs
 
 ```
-[ ] Cursor restarted (after install.sh)
+[ ] IDE restarted after install
 [ ] PATH + GITHUB_PERSONAL_ACCESS_TOKEN in ~/.zshrc
-[ ] agentmemory running in a terminal each session
-[ ] ui-ux-pro-max at ~/.cursor/skills/ui-ux-pro-max/ (auto by install.sh)
-[ ] 21st.dev MCP installed — Cursor Settings → MCP → 21st = green
-[ ] framer-motion added to React projects (npm install framer-motion)
+[ ] agentmemory running each session
+[ ] framer-motion added to React projects
+```
+
+### Cursor-specific
+
+```
+[ ] 21st.dev MCP installed → Cursor Settings → MCP → 21st = green
 [ ] /gsd-new-project or /gsd-map-codebase run in each repo
-[ ] verify-setup.sh passes
+```
+
+### VS Code-specific
+
+```
+[ ] chat.mcp.discovery.enabled = true in VS Code settings
+[ ] 21st.dev MCP installed
+[ ] MCP servers visible in Copilot chat tools
+```
+
+### Antigravity-specific
+
+```
+[ ] Skills discoverable via @skill-name in agent chat
+[ ] MCP servers active
 ```
 
 ---
@@ -155,11 +181,15 @@ curl -sf http://localhost:3111/agentmemory/health && echo "agentmemory OK" || ec
 | Issue | Fix |
 |-------|-----|
 | `agentmemory: command not found` | Add `$HOME/.npm-global/bin` to PATH (Step 2) |
-| GitHub MCP not working | Set `GITHUB_PERSONAL_ACCESS_TOKEN` and restart Cursor |
+| GitHub MCP not working | Set `GITHUB_PERSONAL_ACCESS_TOKEN` and restart IDE |
 | 21st.dev MCP not responding | Re-run install command; verify key at 21st.dev dashboard |
-| GSD commands not found | Run `./scripts/install.sh --force` from the cloned repo |
-| GitNexus warnings about stale index | Run `npx gitnexus analyze` in the project root |
+| GSD commands not found (Cursor) | Run `./scripts/install.sh --ide cursor --force` |
+| GitNexus stale index | Run `npx gitnexus analyze` in project root |
+| VS Code MCP tools not showing | Enable `chat.mcp.discovery.enabled` in settings |
+| Antigravity skills not found | Verify `~/.agents/skills/` contains SKILL.md files |
 
 ---
 
-See also: [docs/PORTABLE-SETUP.md](./PORTABLE-SETUP.md) for setting up on a new machine.
+See also:
+- [docs/IDE-PATHS.md](./IDE-PATHS.md) for the full paths reference
+- [docs/PORTABLE-SETUP.md](./PORTABLE-SETUP.md) for setting up on a new machine

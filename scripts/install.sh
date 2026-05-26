@@ -1,11 +1,23 @@
 #!/usr/bin/env bash
 # =============================================================================
-# cursor-powered-up — Unified Installer
+# cursor-powered-up — Multi-IDE Installer
 # =============================================================================
-# One script that does everything: GSD for Cursor + global power-up stack.
+# Interactive installer supporting Cursor, VS Code, and Antigravity.
 #
 # Usage:
-#   ./scripts/install.sh [--force] [--gsd-only] [--powerup-only]
+#   ./scripts/install.sh                              # Interactive IDE selection
+#   ./scripts/install.sh --ide cursor                 # Cursor only
+#   ./scripts/install.sh --ide vscode                 # VS Code only
+#   ./scripts/install.sh --ide antigravity            # Antigravity only
+#   ./scripts/install.sh --ide all                    # All IDEs
+#   ./scripts/install.sh --ide cursor --non-interactive --force
+#
+# Flags:
+#   --ide <cursor|vscode|antigravity|all>  Target IDE(s)
+#   --force                                 Overwrite without prompting
+#   --non-interactive                       Skip all prompts (use with --ide)
+#   --gsd-only                              Only copy GSD files (Cursor only)
+#   --powerup-only                          Only run power-up phases (skip GSD)
 #
 # =============================================================================
 
@@ -23,22 +35,31 @@ NC='\033[0m'
 # ── Args ──────────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_PATH="$(cd "$SCRIPT_DIR/../src" && pwd)"
-CURSOR_DIR="$HOME/.cursor"
 FORCE=false
 GSD_ONLY=false
 POWERUP_ONLY=false
+NON_INTERACTIVE=false
+IDE_TARGET=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --force|-f)      FORCE=true;        shift ;;
-        --gsd-only)      GSD_ONLY=true;     shift ;;
-        --powerup-only)  POWERUP_ONLY=true; shift ;;
+        --force|-f)         FORCE=true;           shift ;;
+        --gsd-only)         GSD_ONLY=true;        shift ;;
+        --powerup-only)     POWERUP_ONLY=true;    shift ;;
+        --non-interactive)  NON_INTERACTIVE=true;  shift ;;
+        --ide)
+            shift
+            IDE_TARGET="${1:-}"
+            [[ -z "$IDE_TARGET" ]] && { echo "Error: --ide requires a value (cursor|vscode|antigravity|all)"; exit 1; }
+            shift ;;
         --help|-h)
-            echo "Usage: $0 [--force] [--gsd-only] [--powerup-only]"
+            echo "Usage: $0 [--force] [--ide cursor|vscode|antigravity|all] [--non-interactive]"
             echo ""
-            echo "  --force          Overwrite existing installation without prompting"
-            echo "  --gsd-only       Only copy GSD files (skip npm/MCP/skills phases)"
-            echo "  --powerup-only   Only run power-up phases (skip GSD copy)"
+            echo "  --ide <target>     Target IDE: cursor, vscode, antigravity, all"
+            echo "  --force            Overwrite existing installation without prompting"
+            echo "  --non-interactive  Skip all interactive prompts"
+            echo "  --gsd-only         Only copy GSD files (Cursor only, skip npm/MCP/skills)"
+            echo "  --powerup-only     Only run power-up phases (skip GSD copy)"
             exit 0
             ;;
         *) echo "Unknown option: $1"; exit 1 ;;
@@ -48,447 +69,113 @@ done
 NPM_PREFIX="$HOME/.npm-global"
 export PATH="${NPM_PREFIX}/bin:$HOME/.local/bin:${PATH}"
 
-# ── Header ────────────────────────────────────────────────────────────────────
-echo ""
-echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}${BOLD}║   cursor-powered-up  —  Full Installer   ║${NC}"
-echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════╝${NC}"
-echo ""
-echo -e "${GRAY}Source:  $SOURCE_PATH${NC}"
-echo -e "${GRAY}Target:  $CURSOR_DIR${NC}"
-echo ""
-
 # ── Phase helpers ─────────────────────────────────────────────────────────────
 phase() { echo -e "\n${CYAN}${BOLD}▶ Phase $1: $2${NC}"; }
 ok()    { echo -e "  ${GREEN}✓${NC} $1"; }
 warn()  { echo -e "  ${YELLOW}⚠${NC}  $1"; }
 info()  { echo -e "  ${GRAY}  $1${NC}"; }
 
-# =============================================================================
-# PHASE 1 — Detect OS & check prerequisites
-# =============================================================================
-phase 1 "Detect OS & prerequisites"
+# ── Header ────────────────────────────────────────────────────────────────────
+echo ""
+echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}${BOLD}║   cursor-powered-up  —  Multi-IDE Installer      ║${NC}"
+echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "${GRAY}Source:  $SOURCE_PATH${NC}"
+echo ""
 
-OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
-case "$OS" in
-    darwin) ok "macOS detected" ;;
-    linux)  ok "Linux detected" ;;
-    *)      warn "Unknown OS: $OS — continuing anyway" ;;
-esac
+# ── IDE Selection ─────────────────────────────────────────────────────────────
+INSTALL_CURSOR=false
+INSTALL_VSCODE=false
+INSTALL_ANTIGRAVITY=false
 
-check_cmd() {
-    local cmd="$1" pkg="$2" brew_pkg="${3:-$2}"
-    if command -v "$cmd" &>/dev/null; then
-        ok "$cmd found ($(command -v "$cmd"))"
-    else
-        echo -e "  ${RED}✗ $cmd not found${NC}"
-        if [[ "$OS" == "darwin" ]]; then
-            echo -e "    ${YELLOW}Install with: brew install $brew_pkg${NC}"
-        else
-            echo -e "    ${YELLOW}Install with: sudo apt-get install -y $pkg  (or your distro's package manager)${NC}"
-        fi
-        MISSING_PREREQS=1
-    fi
-}
-
-MISSING_PREREQS=0
-
-# Node version check
-if command -v node &>/dev/null; then
-    NODE_VER=$(node -e "process.stdout.write(process.version.replace('v','').split('.')[0])")
-    if [[ "$NODE_VER" -ge 18 ]]; then
-        ok "node v$(node --version | tr -d v) (≥18)"
-    else
-        echo -e "  ${RED}✗ node v$NODE_VER found but ≥18 required${NC}"
-        [[ "$OS" == "darwin" ]] && echo -e "    ${YELLOW}Upgrade: brew upgrade node${NC}"
-        MISSING_PREREQS=1
-    fi
+if [[ -n "$IDE_TARGET" ]]; then
+    case "$IDE_TARGET" in
+        cursor)       INSTALL_CURSOR=true ;;
+        vscode)       INSTALL_VSCODE=true ;;
+        antigravity)  INSTALL_ANTIGRAVITY=true ;;
+        all)          INSTALL_CURSOR=true; INSTALL_VSCODE=true; INSTALL_ANTIGRAVITY=true ;;
+        *) echo -e "${RED}Invalid --ide value: $IDE_TARGET${NC}"; echo "Valid: cursor, vscode, antigravity, all"; exit 1 ;;
+    esac
+elif [[ "$NON_INTERACTIVE" = true ]]; then
+    echo -e "${RED}Error: --non-interactive requires --ide flag${NC}"
+    exit 1
 else
-    echo -e "  ${RED}✗ node not found — node 18+ required${NC}"
-    [[ "$OS" == "darwin" ]] && echo -e "    ${YELLOW}Install: brew install node${NC}"
-    MISSING_PREREQS=1
-fi
-
-check_cmd npm   npm     node
-check_cmd npx   npm     node
-check_cmd git   git     git
-check_cmd python3 python3 python3 || check_cmd python python3 python3 2>/dev/null || warn "python3 not found — MCP JSON merge will use fallback"
-
-if [[ $MISSING_PREREQS -eq 1 ]] && [[ "$FORCE" = false ]]; then
+    echo -e "${BOLD}Which IDE(s) would you like to install for?${NC}"
     echo ""
-    echo -e "  ${RED}One or more prerequisites are missing.${NC}"
-    echo -e "  ${YELLOW}Install them then re-run, or use --force to skip this check.${NC}"
-    exit 1
+    echo "  1) Cursor"
+    echo "  2) VS Code (Copilot + MCP)"
+    echo "  3) Antigravity"
+    echo "  4) All"
+    echo ""
+    read -r -p "  Select [1-4]: " ide_choice
+    case "$ide_choice" in
+        1) INSTALL_CURSOR=true ;;
+        2) INSTALL_VSCODE=true ;;
+        3) INSTALL_ANTIGRAVITY=true ;;
+        4) INSTALL_CURSOR=true; INSTALL_VSCODE=true; INSTALL_ANTIGRAVITY=true ;;
+        *) echo -e "${RED}Invalid selection.${NC}"; exit 1 ;;
+    esac
+fi
+
+echo ""
+echo -e "${CYAN}Install targets:${NC}"
+[[ "$INSTALL_CURSOR" = true ]]      && echo -e "  ${GREEN}✓${NC} Cursor (GSD + skills + MCP + memory)"
+[[ "$INSTALL_VSCODE" = true ]]      && echo -e "  ${GREEN}✓${NC} VS Code (skills + MCP + memory)"
+[[ "$INSTALL_ANTIGRAVITY" = true ]] && echo -e "  ${GREEN}✓${NC} Antigravity (skills + MCP + memory)"
+echo ""
+
+# =============================================================================
+# GENERIC PHASES (all IDEs)
+# =============================================================================
+if [[ "$GSD_ONLY" = false ]]; then
+    source "$SCRIPT_DIR/lib/generic.sh"
 fi
 
 # =============================================================================
-# PHASE 2 — npm user prefix (no sudo)
+# IDE-SPECIFIC PHASES
 # =============================================================================
-if [[ "$GSD_ONLY" = false ]]; then
-phase 2 "npm user prefix (no sudo)"
 
-mkdir -p "${NPM_PREFIX}/bin"
-npm config set prefix "$NPM_PREFIX" 2>/dev/null || true
-
-add_path_line() {
-    local file="$1"
-    local line='export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"'
-    if [[ -f "$file" ]]; then
-        if ! grep -q 'npm-global/bin' "$file" 2>/dev/null; then
-            echo "$line" >> "$file"
-            ok "Added npm-global/bin to $file"
-        else
-            info "npm-global already in $file"
-        fi
-    fi
-}
-
-add_path_line "$HOME/.zshrc"
-add_path_line "$HOME/.bashrc"
-add_path_line "$HOME/.bash_profile"
-fi  # end GSD_ONLY skip
-
-# =============================================================================
-# PHASE 3 — npm global tools
-# =============================================================================
-if [[ "$GSD_ONLY" = false ]]; then
-phase 3 "npm global tools"
-
-install_npm_global() {
-    local pkg="$1"
-    echo -n "  Installing $pkg ... "
-    if npm install -g "$pkg" --prefix "$NPM_PREFIX" 2>/dev/null; then
-        echo -e "${GREEN}ok${NC}"
-    else
-        echo -e "${YELLOW}WARN — retrying without prefix flag${NC}"
-        npm install -g "$pkg" 2>/dev/null || warn "Failed to install $pkg — skip"
-    fi
-}
-
-install_npm_global "@agentmemory/agentmemory"
-install_npm_global "@colbymchenry/codegraph"
-install_npm_global "agnix"
-fi  # end GSD_ONLY skip
-
-# =============================================================================
-# PHASE 4 — Copy GSD files to ~/.cursor
-# =============================================================================
-if [[ "$POWERUP_ONLY" = false ]]; then
-phase 4 "Copy GSD files to ~/.cursor"
-
-if [ ! -d "$SOURCE_PATH" ]; then
-    echo -e "  ${RED}ERROR: Source path not found: $SOURCE_PATH${NC}"
-    exit 1
-fi
-
-if [ -d "$CURSOR_DIR/get-shit-done" ] && [ "$FORCE" = false ]; then
-    echo -e "  ${YELLOW}Existing GSD installation found at: $CURSOR_DIR/get-shit-done${NC}"
-    read -r -p "  Overwrite? (y/N) " response
-    if [[ ! "$response" =~ ^[Yy]$ ]]; then
-        echo -e "  ${CYAN}Skipping GSD file copy.${NC}"
+if [[ "$INSTALL_CURSOR" = true ]]; then
+    echo ""
+    echo -e "${GREEN}${BOLD}── Cursor ──────────────────────────────────────────${NC}"
+    if [[ "$POWERUP_ONLY" = false ]]; then
+        source "$SCRIPT_DIR/lib/cursor.sh"
     fi
 fi
 
-directories=(
-    "commands/gsd"
-    "agents"
-    "get-shit-done/workflows"
-    "get-shit-done/templates"
-    "get-shit-done/templates/codebase"
-    "get-shit-done/templates/research-project"
-    "get-shit-done/references"
-    "get-shit-done/scripts"
-    "hooks"
-    "skills"
-    "cache"
-    "repos"
-)
-
-for dir in "${directories[@]}"; do
-    mkdir -p "$CURSOR_DIR/$dir"
-done
-ok "Directory structure ready"
-
-copy_dir() {
-    local src_dir="$1" dest_dir="$2" label="$3"
-    if [ -d "$src_dir" ]; then
-        local abs_src="$(cd "$src_dir" && pwd)"
-        find "$abs_src" -type f | while read -r file; do
-            local rel="${file#$abs_src/}"
-            local dst="$dest_dir/$rel"
-            mkdir -p "$(dirname "$dst")"
-            cp "$file" "$dst"
-        done
-        ok "Copied $label"
-    else
-        info "SKIPPED (not found): $label"
-    fi
-}
-
-copy_dir "$SOURCE_PATH/commands/gsd"  "$CURSOR_DIR/commands/gsd"              "commands/gsd"
-copy_dir "$SOURCE_PATH/agents"        "$CURSOR_DIR/agents"                    "agents"
-copy_dir "$SOURCE_PATH/workflows"     "$CURSOR_DIR/get-shit-done/workflows"   "workflows"
-copy_dir "$SOURCE_PATH/templates"     "$CURSOR_DIR/get-shit-done/templates"   "templates"
-copy_dir "$SOURCE_PATH/references"    "$CURSOR_DIR/get-shit-done/references"  "references"
-copy_dir "$SOURCE_PATH/hooks"         "$CURSOR_DIR/hooks"                     "hooks"
-
-# Power-up reindex script
-REINDEX_SRC="$SCRIPT_DIR/cursor-powerup-reindex.sh"
-if [ -f "$REINDEX_SRC" ]; then
-    cp "$REINDEX_SRC" "$CURSOR_DIR/get-shit-done/scripts/cursor-powerup-reindex.sh"
-    chmod +x "$CURSOR_DIR/get-shit-done/scripts/cursor-powerup-reindex.sh"
-    ok "Copied cursor-powerup-reindex.sh"
+if [[ "$INSTALL_VSCODE" = true ]] && [[ "$GSD_ONLY" = false ]]; then
+    echo ""
+    echo -e "${GREEN}${BOLD}── VS Code ─────────────────────────────────────────${NC}"
+    source "$SCRIPT_DIR/lib/vscode.sh"
 fi
 
-# GSD skill
-if [ -f "$SOURCE_PATH/skills/gsd-for-cursor/SKILL.md" ]; then
-    mkdir -p "$CURSOR_DIR/skills/gsd-for-cursor"
-    cp "$SOURCE_PATH/skills/gsd-for-cursor/SKILL.md" "$CURSOR_DIR/skills/gsd-for-cursor/SKILL.md"
-    ok "Copied gsd-for-cursor skill"
+if [[ "$INSTALL_ANTIGRAVITY" = true ]] && [[ "$GSD_ONLY" = false ]]; then
+    echo ""
+    echo -e "${GREEN}${BOLD}── Antigravity ─────────────────────────────────────${NC}"
+    source "$SCRIPT_DIR/lib/antigravity.sh"
 fi
 
-# Cursor settings.json (hooks + statusline)
-settings_path="$CURSOR_DIR/settings.json"
-if command -v jq &>/dev/null && [ -f "$settings_path" ]; then
-    jq '. + {
-        "hooks": {
-            "SessionStart": [{"hooks": [
-                {"type":"command","command":"node ~/.cursor/hooks/gsd-check-update.js"},
-                {"type":"command","command":"node ~/.cursor/hooks/gsd-powerup-reminder.js"}
-            ]}]
-        },
-        "statusLine": {"type":"command","command":"node ~/.cursor/hooks/gsd-statusline.js"}
-    }' "$settings_path" > "$settings_path.tmp" && mv "$settings_path.tmp" "$settings_path"
-    ok "Merged hooks into settings.json"
-else
-    cat > "$settings_path" << 'SETTINGS'
-{
-    "hooks": {
-        "SessionStart": [
-            {
-                "hooks": [
-                    {"type": "command", "command": "node ~/.cursor/hooks/gsd-check-update.js"},
-                    {"type": "command", "command": "node ~/.cursor/hooks/gsd-powerup-reminder.js"}
-                ]
-            }
-        ]
-    },
-    "statusLine": {
-        "type": "command",
-        "command": "node ~/.cursor/hooks/gsd-statusline.js"
-    }
-}
-SETTINGS
-    ok "Created settings.json"
-fi
-
-echo "2.0.0" > "$CURSOR_DIR/get-shit-done/VERSION"
-fi  # end POWERUP_ONLY skip
-
 # =============================================================================
-# PHASE 5 — agentmemory connect cursor (MCP wiring)
+# FINALIZE
 # =============================================================================
-if [[ "$GSD_ONLY" = false ]]; then
-phase 5 "agentmemory → Cursor MCP"
-
-if command -v agentmemory &>/dev/null; then
-    agentmemory connect cursor 2>/dev/null && ok "agentmemory connect cursor done" \
-        || warn "agentmemory connect cursor returned non-zero — check manually"
-else
-    warn "agentmemory not on PATH yet — open a new terminal and run: agentmemory connect cursor"
-    info "  (PATH will include ~/.npm-global/bin after restarting your shell)"
-fi
-fi  # end GSD_ONLY skip
-
-# =============================================================================
-# PHASE 6 — Ensure playwright + github in mcp.json
-# =============================================================================
-if [[ "$GSD_ONLY" = false ]]; then
-phase 6 "Ensure playwright + github in mcp.json"
-
-MCP="$HOME/.cursor/mcp.json"
-
-merge_mcp_python() {
-python3 - <<'PY'
-import json, os, sys
-p = os.path.expanduser("~/.cursor/mcp.json")
-try:
-    with open(p) as f:
-        d = json.load(f)
-except Exception:
-    d = {}
-s = d.setdefault("mcpServers", {})
-changed = False
-if "playwright" not in s:
-    s["playwright"] = {"command": "npx", "args": ["-y", "@playwright/mcp@latest"]}
-    changed = True
-if "github" not in s:
-    s["github"] = {
-        "url": "https://api.githubcopilot.com/mcp/",
-        "headers": {"Authorization": "Bearer ${env:GITHUB_PERSONAL_ACCESS_TOKEN}"}
-    }
-    changed = True
-if changed:
-    with open(p, "w") as f:
-        json.dump(d, f, indent=2)
-        f.write("\n")
-    print("MCP: ensured playwright + github entries")
-else:
-    print("MCP: playwright + github already present")
-PY
-}
-
-if [ -f "$MCP" ] && command -v python3 &>/dev/null; then
-    merge_mcp_python && ok "mcp.json updated" || warn "mcp.json merge failed — see below"
-elif [ -f "$MCP" ] && command -v node &>/dev/null; then
-    # node fallback
-    node - "$MCP" <<'JS'
-const fs=require('fs'), p=process.argv[1];
-let d={}; try{d=JSON.parse(fs.readFileSync(p,'utf8'))}catch(e){}
-const s=d.mcpServers||(d.mcpServers={});
-if(!s.playwright) s.playwright={command:'npx',args:['-y','@playwright/mcp@latest']};
-if(!s.github) s.github={url:'https://api.githubcopilot.com/mcp/',headers:{Authorization:'Bearer ${env:GITHUB_PERSONAL_ACCESS_TOKEN}'}};
-fs.writeFileSync(p,JSON.stringify(d,null,2)+'\n');
-console.log('MCP: ensured playwright + github');
-JS
-    ok "mcp.json updated (node fallback)"
-else
-    # create from scratch
-    mkdir -p "$HOME/.cursor"
-    cat > "$MCP" << 'EOF'
-{
-  "mcpServers": {
-    "agentmemory": {
-      "command": "npx",
-      "args": ["-y", "@agentmemory/mcp"],
-      "env": { "AGENTMEMORY_URL": "${AGENTMEMORY_URL:-http://localhost:3111}" }
-    },
-    "playwright": {
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"]
-    },
-    "github": {
-      "url": "https://api.githubcopilot.com/mcp/",
-      "headers": { "Authorization": "Bearer ${env:GITHUB_PERSONAL_ACCESS_TOKEN}" }
-    }
-  }
-}
-EOF
-    ok "Created mcp.json with agentmemory, playwright, github"
-fi
-fi  # end GSD_ONLY skip
-
-# =============================================================================
-# PHASE 7 — antigravity safe skills
-# =============================================================================
-if [[ "$GSD_ONLY" = false ]]; then
-phase 7 "antigravity safe skills bundle"
-
-mkdir -p "$CURSOR_DIR/skills"
-npx --yes antigravity-awesome-skills \
-    --path "$CURSOR_DIR/skills" \
-    --category development,backend \
-    --risk safe 2>/dev/null \
-    && ok "antigravity skills installed" \
-    || warn "antigravity install skipped or failed (non-fatal)"
-fi  # end GSD_ONLY skip
-
-# =============================================================================
-# PHASE 7b — Install UI-UX Pro Max skill
-# =============================================================================
-if [[ "$GSD_ONLY" = false ]]; then
-phase "7b" "UI-UX Pro Max skill"
-
-mkdir -p "$CURSOR_DIR/skills"
-UUPM_SKILL_DIR="$CURSOR_DIR/skills/ui-ux-pro-max"
-
-if [[ -d "$UUPM_SKILL_DIR" ]] && [[ "$FORCE" = false ]]; then
-    info "ui-ux-pro-max already installed at $UUPM_SKILL_DIR"
-else
-    # Try uipro-cli first (installs from NPM, always latest)
-    if command -v uipro &>/dev/null || npm list -g uipro-cli &>/dev/null 2>&1; then
-        echo -n "  Installing via uipro-cli ... "
-        (cd "$HOME" && npx --yes uipro-cli init --ai cursor --force 2>/dev/null) \
-            && ok "ui-ux-pro-max installed via uipro-cli" \
-            || warn "uipro-cli install failed, falling back to git clone"
-    fi
-
-    # Fallback: shallow git clone
-    if [[ ! -f "$UUPM_SKILL_DIR/SKILL.md" ]]; then
-        echo -n "  Cloning ui-ux-pro-max via git ... "
-        git clone --depth 1 https://github.com/nextlevelbuilder/ui-ux-pro-max-skill /tmp/ui-ux-pro-max-skill 2>/dev/null \
-            && mkdir -p "$UUPM_SKILL_DIR" \
-            && cp -r /tmp/ui-ux-pro-max-skill/.cursor/skills/ui-ux-pro-max/. "$UUPM_SKILL_DIR/" 2>/dev/null \
-            && ok "ui-ux-pro-max installed via git clone" \
-            || warn "ui-ux-pro-max install failed (non-fatal) — install manually: uipro init --ai cursor"
-        rm -rf /tmp/ui-ux-pro-max-skill 2>/dev/null || true
-    fi
-
-    # Add YAML frontmatter if SKILL.md is missing it
-    if [[ -f "$UUPM_SKILL_DIR/SKILL.md" ]] && ! head -1 "$UUPM_SKILL_DIR/SKILL.md" | grep -q "^---"; then
-        TMPFILE="$(mktemp)"
-        printf -- '---\nname: ui-ux-pro-max\ndescription: AI skill providing design intelligence for UI/UX across multiple platforms. Features 67 styles, 161 color palettes, 57 font pairings, 99 UX guidelines, and 161 industry reasoning rules. Auto-activates for UI/UX requests in Cursor.\n---\n\n' > "$TMPFILE"
-        cat "$UUPM_SKILL_DIR/SKILL.md" >> "$TMPFILE"
-        mv "$TMPFILE" "$UUPM_SKILL_DIR/SKILL.md"
-        info "Added YAML frontmatter to SKILL.md"
-    fi
-fi
-fi  # end GSD_ONLY skip
-
-# =============================================================================
-# PHASE 8 — Clone reference repos to ~/.cursor/repos
-# =============================================================================
-if [[ "$GSD_ONLY" = false ]]; then
-phase 8 "Clone reference repos to ~/.cursor/repos"
-
-mkdir -p "$CURSOR_DIR/repos"
-
-clone_if_missing() {
-    local name="$1" url="$2"
-    if [ -d "$CURSOR_DIR/repos/$name" ]; then
-        info "Already exists: $name"
-    else
-        echo -n "  Cloning $name ... "
-        git clone --depth 1 "$url" "$CURSOR_DIR/repos/$name" 2>/dev/null \
-            && echo -e "${GREEN}ok${NC}" \
-            || echo -e "${YELLOW}WARN — clone failed (non-fatal)${NC}"
-    fi
-}
-
-clone_if_missing agentmemory              "https://github.com/rohitg00/agentmemory"
-clone_if_missing codegraph                "https://github.com/colbymchenry/codegraph"
-clone_if_missing antigravity-awesome-skills "https://github.com/sickn33/antigravity-awesome-skills"
-clone_if_missing awesome-cursorrules      "https://github.com/PatrickJS/awesome-cursorrules"
-fi  # end GSD_ONLY skip
-
-# =============================================================================
-# PHASE 9 — Ensure gitnexus available via npx
-# =============================================================================
-if [[ "$GSD_ONLY" = false ]]; then
-phase 9 "gitnexus availability"
-
-if command -v gitnexus &>/dev/null; then
-    ok "gitnexus binary found: $(command -v gitnexus)"
-else
-    echo -n "  Installing gitnexus globally ... "
-    npm install -g gitnexus 2>/dev/null \
-        && echo -e "${GREEN}ok${NC}" \
-        || { echo -e "${YELLOW}WARN — npm install -g gitnexus failed${NC}"; \
-             info "Use: npx gitnexus analyze   (works without global install)"; }
-fi
-fi  # end GSD_ONLY skip
-
-# =============================================================================
-# PHASE 10 — chmod scripts & write POWERUP-INSTALLED.md
-# =============================================================================
-phase 10 "Finalize & write POWERUP-INSTALLED.md"
+phase "F" "Finalize & write install record"
 
 chmod +x "$SCRIPT_DIR"/*.sh 2>/dev/null || true
+chmod +x "$SCRIPT_DIR"/lib/*.sh 2>/dev/null || true
 
 INSTALLED_AT="$(date '+%Y-%m-%d %H:%M %Z')"
-INSTALLED_VERSION="2.0.0"
+INSTALLED_VERSION="3.0.0"
+INSTALLED_IDES=""
+[[ "$INSTALL_CURSOR" = true ]]      && INSTALLED_IDES="${INSTALLED_IDES}Cursor, "
+[[ "$INSTALL_VSCODE" = true ]]      && INSTALLED_IDES="${INSTALLED_IDES}VS Code, "
+[[ "$INSTALL_ANTIGRAVITY" = true ]] && INSTALLED_IDES="${INSTALLED_IDES}Antigravity, "
+INSTALLED_IDES="${INSTALLED_IDES%, }"
 
-cat > "$CURSOR_DIR/POWERUP-INSTALLED.md" << EOF
+write_install_record() {
+    local target_dir="$1"
+    mkdir -p "$target_dir"
+    cat > "$target_dir/POWERUP-INSTALLED.md" << EOF
 # cursor-powered-up installation record
 
 | Field   | Value |
@@ -496,44 +183,56 @@ cat > "$CURSOR_DIR/POWERUP-INSTALLED.md" << EOF
 | Version | $INSTALLED_VERSION |
 | Date    | $INSTALLED_AT |
 | Source  | $SCRIPT_DIR |
-| Target  | $CURSOR_DIR |
+| IDEs    | $INSTALLED_IDES |
 
 ## What was installed
 
-- GSD for Cursor (commands, agents, workflows, templates, references, hooks)
-- Global npm tools: @agentmemory/agentmemory, @colbymchenry/codegraph, agnix
+- Global npm tools: @agentmemory/agentmemory, @colbymchenry/codegraph, agnix, gitnexus
+- antigravity skills (development,backend, risk=safe)
+- ui-ux-pro-max skill
 - MCP wired: agentmemory, playwright, github
-- antigravity safe skills bundle
-- UI-UX Pro Max skill (~/.cursor/skills/ui-ux-pro-max/)
 - Reference repos cloned to ~/.cursor/repos/
-- Hooks: gsd-check-update, gsd-powerup-reminder, gsd-statusline
+
+## IDE-specific
+
+- **Cursor**: GSD commands, agents, workflows, templates, references, hooks + full MCP
+- **VS Code**: Skills + MCP (user-level) — GSD is Cursor-exclusive
+- **Antigravity**: Skills + MCP — GSD is Cursor-exclusive
 
 ## Update
 
 \`\`\`bash
 cd <cursor-powered-up-repo>
 git pull
-./scripts/install.sh --force
+./scripts/install.sh --ide all --force
 \`\`\`
 EOF
-ok "Wrote ~/.cursor/POWERUP-INSTALLED.md"
+}
+
+[[ "$INSTALL_CURSOR" = true ]]      && write_install_record "$HOME/.cursor"
+[[ "$INSTALL_VSCODE" = true ]]      && write_install_record "$HOME/.vscode"
+[[ "$INSTALL_ANTIGRAVITY" = true ]] && write_install_record "$HOME/.agents"
+
+ok "Wrote install record(s)"
 
 # =============================================================================
-# PHASE 11 — Full power banner
+# BANNER
 # =============================================================================
-phase 11 "Full power banner"
-
 echo ""
-echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}${BOLD}║   cursor-powered-up  installed!          ║${NC}"
-echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════╝${NC}"
+echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════════════╗${NC}"
+echo -e "${GREEN}${BOLD}║   cursor-powered-up v${INSTALLED_VERSION} installed!           ║${NC}"
+echo -e "${GREEN}${BOLD}║   IDEs: ${INSTALLED_IDES}$(printf '%*s' $((30 - ${#INSTALLED_IDES})) '')║${NC}"
+echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════════════╝${NC}"
 echo ""
-echo -e "${YELLOW}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${YELLOW}${BOLD} FULL POWER — complete these steps (required for 21st.dev + UI):${NC}"
-echo -e "${YELLOW}${BOLD} See: docs/POST-INSTALL.md in this repo${NC}"
-echo -e "${YELLOW}   • 21st.dev MCP (your API key)${NC}"
-echo -e "${YELLOW}   • framer-motion in React projects${NC}"
-echo -e "${YELLOW}   • GITHUB_PERSONAL_ACCESS_TOKEN${NC}"
-echo -e "${YELLOW}   • agentmemory each session${NC}"
-echo -e "${YELLOW}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${YELLOW}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${YELLOW}${BOLD} POST-INSTALL STEPS (see docs/POST-INSTALL.md):${NC}"
+echo -e "${YELLOW}   • Restart your IDE(s)${NC}"
+echo -e "${YELLOW}   • Set GITHUB_PERSONAL_ACCESS_TOKEN in ~/.zshrc${NC}"
+echo -e "${YELLOW}   • Run 'agentmemory' each coding session${NC}"
+if [[ "$INSTALL_CURSOR" = true ]] || [[ "$INSTALL_VSCODE" = true ]]; then
+echo -e "${YELLOW}   • 21st.dev MCP (your API key):${NC}"
+[[ "$INSTALL_CURSOR" = true ]] && echo -e "${YELLOW}       npx @21st-dev/cli install cursor --api-key YOUR_KEY${NC}"
+[[ "$INSTALL_VSCODE" = true ]] && echo -e "${YELLOW}       npx @21st-dev/cli install vscode --api-key YOUR_KEY${NC}"
+fi
+echo -e "${YELLOW}${BOLD}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
