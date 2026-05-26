@@ -1,214 +1,427 @@
 <#
 .SYNOPSIS
-    Installs GSD for Cursor IDE to ~/.cursor/
+    cursor-powered-up — Unified Installer (Windows)
 
 .DESCRIPTION
-    This script installs the GSD (Get Shit Done) system for Cursor IDE by
-    copying all necessary files to the ~/.cursor/ directory.
-
-.PARAMETER SourcePath
-    Path to the cursor-gsd/src directory (default: ./src relative to script)
+    One script that does everything: GSD for Cursor + global power-up stack.
+    Mirrors scripts/install.sh for Windows PowerShell.
 
 .PARAMETER Force
-    Overwrite existing installation without prompting
+    Overwrite existing installation without prompting.
+
+.PARAMETER GsdOnly
+    Only copy GSD files (skip npm/MCP/skills phases).
+
+.PARAMETER PowerupOnly
+    Only run power-up phases (skip GSD file copy).
 
 .EXAMPLE
-    .\install.ps1
-    
-.EXAMPLE
-    .\install.ps1 -Force
+    .\scripts\install.ps1
+    .\scripts\install.ps1 -Force
+    .\scripts\install.ps1 -GsdOnly
 #>
 
 param(
-    [Parameter(Mandatory=$false)]
-    [string]$SourcePath = "",
-    
-    [Parameter(Mandatory=$false)]
-    [switch]$Force
+    [switch]$Force,
+    [switch]$GsdOnly,
+    [switch]$PowerupOnly
 )
 
 $ErrorActionPreference = "Stop"
 
-# Determine paths
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-if ([string]::IsNullOrEmpty($SourcePath)) {
-    $SourcePath = Join-Path $ScriptDir "..\src"
-}
+# ── Paths ─────────────────────────────────────────────────────────────────────
+$ScriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
+$SourcePath = (Resolve-Path (Join-Path $ScriptDir "..\src")).Path
+$HomeDir    = if ($env:USERPROFILE) { $env:USERPROFILE } elseif ($env:HOME) { $env:HOME } else { throw "Cannot determine home directory" }
+$CursorDir  = Join-Path $HomeDir ".cursor"
+$NpmPrefix  = Join-Path $HomeDir ".npm-global"
 
-$CursorDir = Join-Path $env:USERPROFILE ".cursor"
+# ── Helpers ───────────────────────────────────────────────────────────────────
+function Phase($n, $title) { Write-Host "`n▶ Phase ${n}: $title" -ForegroundColor Cyan }
+function Ok($msg)   { Write-Host "  ✓ $msg" -ForegroundColor Green }
+function Warn($msg) { Write-Host "  ⚠ $msg" -ForegroundColor Yellow }
+function Info($msg) { Write-Host "    $msg" -ForegroundColor Gray }
 
-# Validate CursorDir path
-if ([string]::IsNullOrEmpty($env:USERPROFILE)) {
-    Write-Host "ERROR: USERPROFILE environment variable is not set." -ForegroundColor Red
-    Write-Host "Falling back to HOME or manual path." -ForegroundColor Yellow
-    if ($env:HOME) {
-        $CursorDir = Join-Path $env:HOME ".cursor"
+# ── Header ────────────────────────────────────────────────────────────────────
+Write-Host ""
+Write-Host "╔══════════════════════════════════════════╗" -ForegroundColor Green
+Write-Host "║   cursor-powered-up  —  Full Installer   ║" -ForegroundColor Green
+Write-Host "╚══════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host ""
+Write-Host "  Source:  $SourcePath" -ForegroundColor Gray
+Write-Host "  Target:  $CursorDir"  -ForegroundColor Gray
+Write-Host ""
+
+# =============================================================================
+# PHASE 1 — Prerequisites
+# =============================================================================
+Phase 1 "Check prerequisites"
+
+$missingPrereqs = $false
+
+function CheckCmd($cmd, $installHint) {
+    $found = Get-Command $cmd -ErrorAction SilentlyContinue
+    if ($found) {
+        Ok "$cmd found ($($found.Source))"
     } else {
-        Write-Host "ERROR: Cannot determine user home directory." -ForegroundColor Red
-        exit 1
+        Write-Host "  ✗ $cmd not found — $installHint" -ForegroundColor Red
+        $script:missingPrereqs = $true
     }
 }
 
-Write-Host "`n========================================" -ForegroundColor Green
-Write-Host "  GSD Installer for Cursor IDE" -ForegroundColor Green
-Write-Host "========================================`n" -ForegroundColor Green
+# Node version check
+$nodeCmd = Get-Command node -ErrorAction SilentlyContinue
+if ($nodeCmd) {
+    $nodeVer = [int](node -e "process.stdout.write(process.version.replace('v','').split('.')[0])")
+    if ($nodeVer -ge 18) {
+        Ok "node $(node --version) (≥18)"
+    } else {
+        Write-Host "  ✗ node v$nodeVer found but ≥18 required — download from https://nodejs.org" -ForegroundColor Red
+        $missingPrereqs = $true
+    }
+} else {
+    Write-Host "  ✗ node not found — download from https://nodejs.org" -ForegroundColor Red
+    $missingPrereqs = $true
+}
 
-Write-Host "Paths:" -ForegroundColor Cyan
-Write-Host "  Source:      $SourcePath" -ForegroundColor Gray
-Write-Host "  Target:      $CursorDir" -ForegroundColor Gray
-Write-Host ""
+CheckCmd "npm"  "comes with Node.js — https://nodejs.org"
+CheckCmd "npx"  "comes with Node.js — https://nodejs.org"
+CheckCmd "git"  "download from https://git-scm.com"
 
-# Check source exists
-if (-not (Test-Path $SourcePath)) {
-    Write-Host "ERROR: Source path not found: $SourcePath" -ForegroundColor Red
-    Write-Host "Run the migration script first to generate the src directory." -ForegroundColor Yellow
+if ($missingPrereqs -and -not $Force) {
+    Write-Host ""
+    Write-Host "  One or more prerequisites are missing." -ForegroundColor Red
+    Write-Host "  Install them then re-run, or use -Force to skip this check." -ForegroundColor Yellow
     exit 1
 }
 
-# Check for existing installation
-$existingGSD = Join-Path $CursorDir "get-shit-done"
-if ((Test-Path $existingGSD) -and -not $Force) {
-    Write-Host "Existing GSD installation found at: $existingGSD" -ForegroundColor Yellow
-    $response = Read-Host "Overwrite? (y/N)"
-    if ($response -ne "y" -and $response -ne "Y") {
-        Write-Host "Installation cancelled." -ForegroundColor Cyan
-        exit 0
-    }
-}
+# =============================================================================
+# PHASE 2 — npm user prefix (no admin)
+# =============================================================================
+if (-not $GsdOnly) {
+    Phase 2 "npm user prefix (no admin)"
 
-# Create directory structure
-Write-Host "Creating directory structure..." -ForegroundColor Cyan
+    New-Item -ItemType Directory -Path $NpmPrefix -Force | Out-Null
+    New-Item -ItemType Directory -Path (Join-Path $NpmPrefix "bin") -Force | Out-Null
+    npm config set prefix $NpmPrefix 2>$null
 
-$directories = @(
-    "commands\gsd",
-    "agents",
-    "get-shit-done\workflows",
-    "get-shit-done\templates",
-    "get-shit-done\templates\codebase",
-    "get-shit-done\templates\research-project",
-    "get-shit-done\references",
-    "hooks",
-    "cache"
-)
-
-foreach ($dir in $directories) {
-    $fullPath = Join-Path $CursorDir $dir
-    if (-not (Test-Path $fullPath)) {
-        New-Item -ItemType Directory -Path $fullPath -Force | Out-Null
-        Write-Host "  Created: $dir" -ForegroundColor Gray
-    }
-}
-
-# Copy files
-Write-Host "`nCopying files..." -ForegroundColor Cyan
-
-$fileMappings = @(
-    @{ Source = "commands\gsd"; Dest = "commands\gsd" },
-    @{ Source = "agents"; Dest = "agents" },
-    @{ Source = "workflows"; Dest = "get-shit-done\workflows" },
-    @{ Source = "templates"; Dest = "get-shit-done\templates" },
-    @{ Source = "references"; Dest = "get-shit-done\references" },
-    @{ Source = "hooks"; Dest = "hooks" }
-)
-
-$fileCount = 0
-foreach ($mapping in $fileMappings) {
-    $srcDirRaw = Join-Path $SourcePath $mapping.Source
-    $destDir = Join-Path $CursorDir $mapping.Dest
-    
-    Write-Host "  Processing: $($mapping.Source)" -ForegroundColor Gray
-    
-    if (Test-Path $srcDirRaw) {
-        # Resolve to absolute path for correct substring calculation
-        $srcDir = (Resolve-Path $srcDirRaw).Path
-        
-        Write-Host "    srcDir:  $srcDir" -ForegroundColor DarkGray
-        Write-Host "    destDir: $destDir" -ForegroundColor DarkGray
-        
-        Get-ChildItem -Path $srcDir -Recurse -File | ForEach-Object {
-            $relativePath = $_.FullName.Substring($srcDir.Length + 1)
-            $destPath = Join-Path $destDir $relativePath
-            $destFolder = Split-Path -Parent $destPath
-            
-            Write-Host "    File: $($_.Name)" -ForegroundColor DarkGray
-            Write-Host "      relativePath: $relativePath" -ForegroundColor DarkGray
-            Write-Host "      destPath:     $destPath" -ForegroundColor DarkGray
-            Write-Host "      destFolder:   $destFolder" -ForegroundColor DarkGray
-            
-            if (-not (Test-Path $destFolder)) {
-                New-Item -ItemType Directory -Path $destFolder -Force | Out-Null
-                Write-Host "      Created folder: $destFolder" -ForegroundColor DarkYellow
-            }
-            
-            Copy-Item -Path $_.FullName -Destination $destPath -Force
-            Write-Host "      Copied!" -ForegroundColor DarkGreen
-            $fileCount++
-        }
+    # Add to user PATH persistently
+    $userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+    $npmBin = Join-Path $NpmPrefix "bin"
+    if ($userPath -notlike "*npm-global*") {
+        [System.Environment]::SetEnvironmentVariable("Path", "$npmBin;$userPath", "User")
+        $env:Path = "$npmBin;$env:Path"
+        Ok "Added $npmBin to user PATH"
     } else {
-        Write-Host "    srcDir:  $srcDirRaw" -ForegroundColor DarkGray
-        Write-Host "    SKIPPED: Source not found" -ForegroundColor DarkYellow
+        Info "npm-global already in user PATH"
     }
-}
 
-# Create or update settings.json
-Write-Host "`nConfiguring settings..." -ForegroundColor Cyan
-
-$settingsPath = Join-Path $CursorDir "settings.json"
-$settings = @{
-    hooks = @{
-        SessionStart = @(
-            @{
-                hooks = @(
-                    @{
-                        type = "command"
-                        command = "node ~/.cursor/hooks/gsd-check-update.js"
-                    }
-                )
-            }
-        )
-    }
-    statusLine = @{
-        type = "command"
-        command = "node ~/.cursor/hooks/gsd-statusline.js"
-    }
-}
-
-if (Test-Path $settingsPath) {
-    try {
-        $existingSettings = Get-Content $settingsPath -Raw | ConvertFrom-Json -AsHashtable
-        # Merge hooks configuration
-        if ($existingSettings.hooks) {
-            $existingSettings.hooks.SessionStart = $settings.hooks.SessionStart
+    # PowerShell profile
+    $profilePath = $PROFILE.CurrentUserAllHosts
+    if ($profilePath -and (Test-Path (Split-Path $profilePath))) {
+        if (-not (Test-Path $profilePath) -or -not (Get-Content $profilePath -ErrorAction SilentlyContinue | Select-String "npm-global")) {
+            Add-Content $profilePath "`n`$env:Path = `"$npmBin;`$env:Path`""
+            Ok "Added npm-global to PowerShell profile"
         } else {
-            $existingSettings.hooks = $settings.hooks
+            Info "npm-global already in PowerShell profile"
         }
-        $existingSettings.statusLine = $settings.statusLine
-        $settings = $existingSettings
-    }
-    catch {
-        Write-Host "  Warning: Could not parse existing settings.json, creating new one" -ForegroundColor Yellow
     }
 }
 
-$settings | ConvertTo-Json -Depth 10 | Set-Content $settingsPath -Encoding UTF8
-Write-Host "  Updated: settings.json" -ForegroundColor Gray
+# =============================================================================
+# PHASE 3 — npm global tools
+# =============================================================================
+if (-not $GsdOnly) {
+    Phase 3 "npm global tools"
 
-# Create VERSION file
-$versionPath = Join-Path $CursorDir "get-shit-done\VERSION"
-"1.0.0" | Set-Content $versionPath -Encoding UTF8
-Write-Host "  Created: VERSION" -ForegroundColor Gray
+    foreach ($pkg in @("@agentmemory/agentmemory", "@colbymchenry/codegraph", "agnix")) {
+        Write-Host "  Installing $pkg ..." -NoNewline
+        try {
+            npm install -g $pkg --prefix $NpmPrefix 2>$null
+            Write-Host " ok" -ForegroundColor Green
+        } catch {
+            Write-Host " WARN — failed (non-fatal)" -ForegroundColor Yellow
+        }
+    }
+}
 
-# Summary
-Write-Host "`n========================================" -ForegroundColor Green
-Write-Host "  Installation Complete!" -ForegroundColor Green
-Write-Host "========================================" -ForegroundColor Green
-Write-Host "  Files installed: $fileCount" -ForegroundColor Cyan
-Write-Host "  Location: $CursorDir" -ForegroundColor Cyan
-Write-Host "========================================`n" -ForegroundColor Green
+# =============================================================================
+# PHASE 4 — Copy GSD files to ~/.cursor
+# =============================================================================
+if (-not $PowerupOnly) {
+    Phase 4 "Copy GSD files to ~/.cursor"
 
-Write-Host "Quick start:" -ForegroundColor Yellow
-Write-Host "  1. Open Cursor IDE" -ForegroundColor White
-Write-Host "  2. Type /gsd-help to see all commands" -ForegroundColor White
-Write-Host "  3. Type /gsd-new-project to start a new project" -ForegroundColor White
+    if (-not (Test-Path $SourcePath)) {
+        Write-Host "  ERROR: Source path not found: $SourcePath" -ForegroundColor Red
+        exit 1
+    }
+
+    $existingGSD = Join-Path $CursorDir "get-shit-done"
+    if ((Test-Path $existingGSD) -and -not $Force) {
+        Write-Host "  Existing GSD installation found at: $existingGSD" -ForegroundColor Yellow
+        $response = Read-Host "  Overwrite? (y/N)"
+        if ($response -ne "y" -and $response -ne "Y") {
+            Write-Host "  Skipping GSD file copy." -ForegroundColor Cyan
+        }
+    }
+
+    $dirs = @(
+        "commands\gsd", "agents",
+        "get-shit-done\workflows", "get-shit-done\templates",
+        "get-shit-done\templates\codebase", "get-shit-done\templates\research-project",
+        "get-shit-done\references", "get-shit-done\scripts",
+        "hooks", "skills", "cache", "repos"
+    )
+    foreach ($d in $dirs) {
+        New-Item -ItemType Directory -Path (Join-Path $CursorDir $d) -Force | Out-Null
+    }
+    Ok "Directory structure ready"
+
+    function CopyDir($srcSub, $destSub, $label) {
+        $src  = Join-Path $SourcePath $srcSub
+        $dest = Join-Path $CursorDir  $destSub
+        if (Test-Path $src) {
+            $srcFull = (Resolve-Path $src).Path
+            Get-ChildItem -Path $srcFull -Recurse -File | ForEach-Object {
+                $rel  = $_.FullName.Substring($srcFull.Length + 1)
+                $dst  = Join-Path $dest $rel
+                $dstF = Split-Path $dst -Parent
+                if (-not (Test-Path $dstF)) { New-Item -ItemType Directory -Path $dstF -Force | Out-Null }
+                Copy-Item -Path $_.FullName -Destination $dst -Force
+            }
+            Ok "Copied $label"
+        } else {
+            Info "SKIPPED (not found): $label"
+        }
+    }
+
+    CopyDir "commands\gsd"  "commands\gsd"                    "commands/gsd"
+    CopyDir "agents"        "agents"                           "agents"
+    CopyDir "workflows"     "get-shit-done\workflows"          "workflows"
+    CopyDir "templates"     "get-shit-done\templates"          "templates"
+    CopyDir "references"    "get-shit-done\references"         "references"
+    CopyDir "hooks"         "hooks"                            "hooks"
+
+    # reindex script
+    $reindexSrc = Join-Path $ScriptDir "cursor-powerup-reindex.sh"
+    if (Test-Path $reindexSrc) {
+        $reindexDst = Join-Path $CursorDir "get-shit-done\scripts\cursor-powerup-reindex.sh"
+        Copy-Item $reindexSrc $reindexDst -Force
+        Ok "Copied cursor-powerup-reindex.sh"
+    }
+
+    # GSD skill
+    $skillSrc = Join-Path $SourcePath "skills\gsd-for-cursor\SKILL.md"
+    if (Test-Path $skillSrc) {
+        $skillDst = Join-Path $CursorDir "skills\gsd-for-cursor\SKILL.md"
+        New-Item -ItemType Directory -Path (Split-Path $skillDst) -Force | Out-Null
+        Copy-Item $skillSrc $skillDst -Force
+        Ok "Copied gsd-for-cursor skill"
+    }
+
+    # settings.json
+    $settingsPath = Join-Path $CursorDir "settings.json"
+    $settingsObj = @{
+        hooks = @{
+            SessionStart = @(@{
+                hooks = @(
+                    @{ type = "command"; command = "node ~/.cursor/hooks/gsd-check-update.js" },
+                    @{ type = "command"; command = "node ~/.cursor/hooks/gsd-powerup-reminder.js" }
+                )
+            })
+        }
+        statusLine = @{ type = "command"; command = "node ~/.cursor/hooks/gsd-statusline.js" }
+    }
+    if (Test-Path $settingsPath) {
+        try {
+            $existing = Get-Content $settingsPath -Raw | ConvertFrom-Json -AsHashtable -ErrorAction Stop
+            $existing["hooks"]      = $settingsObj["hooks"]
+            $existing["statusLine"] = $settingsObj["statusLine"]
+            $settingsObj = $existing
+        } catch {
+            Warn "Could not parse existing settings.json — overwriting"
+        }
+    }
+    $settingsObj | ConvertTo-Json -Depth 10 | Set-Content $settingsPath -Encoding UTF8
+    Ok "settings.json updated"
+
+    "2.0.0" | Set-Content (Join-Path $CursorDir "get-shit-done\VERSION") -Encoding UTF8
+}
+
+# =============================================================================
+# PHASE 5 — agentmemory connect cursor
+# =============================================================================
+if (-not $GsdOnly) {
+    Phase 5 "agentmemory → Cursor MCP"
+    $agentmemory = Get-Command agentmemory -ErrorAction SilentlyContinue
+    if ($agentmemory) {
+        try { agentmemory connect cursor 2>$null; Ok "agentmemory connect cursor done" }
+        catch { Warn "agentmemory connect cursor failed — run manually in a new terminal" }
+    } else {
+        Warn "agentmemory not on PATH yet — open a new terminal and run: agentmemory connect cursor"
+    }
+}
+
+# =============================================================================
+# PHASE 6 — Ensure playwright + github in mcp.json
+# =============================================================================
+if (-not $GsdOnly) {
+    Phase 6 "Ensure playwright + github in mcp.json"
+    $mcpPath = Join-Path $CursorDir "mcp.json"
+
+    if (Test-Path $mcpPath) {
+        try {
+            $mcp = Get-Content $mcpPath -Raw | ConvertFrom-Json -AsHashtable
+        } catch { $mcp = @{} }
+    } else { $mcp = @{} }
+
+    if (-not $mcp.ContainsKey("mcpServers")) { $mcp["mcpServers"] = @{} }
+    $s = $mcp["mcpServers"]
+
+    if (-not $s.ContainsKey("playwright")) {
+        $s["playwright"] = @{ command = "npx"; args = @("-y", "@playwright/mcp@latest") }
+    }
+    if (-not $s.ContainsKey("github")) {
+        $s["github"] = @{
+            url     = "https://api.githubcopilot.com/mcp/"
+            headers = @{ Authorization = 'Bearer ${env:GITHUB_PERSONAL_ACCESS_TOKEN}' }
+        }
+    }
+    if (-not $s.ContainsKey("agentmemory")) {
+        $s["agentmemory"] = @{
+            command = "npx"
+            args    = @("-y", "@agentmemory/mcp")
+            env     = @{ AGENTMEMORY_URL = '${AGENTMEMORY_URL:-http://localhost:3111}' }
+        }
+    }
+
+    $mcp | ConvertTo-Json -Depth 10 | Set-Content $mcpPath -Encoding UTF8
+    Ok "mcp.json updated (playwright + github + agentmemory)"
+}
+
+# =============================================================================
+# PHASE 7 — antigravity safe skills
+# =============================================================================
+if (-not $GsdOnly) {
+    Phase 7 "antigravity safe skills bundle"
+    New-Item -ItemType Directory -Path (Join-Path $CursorDir "skills") -Force | Out-Null
+    try {
+        npx --yes antigravity-awesome-skills `
+            --path (Join-Path $CursorDir "skills") `
+            --category development,backend,frontend,security `
+            --risk safe 2>$null
+        Ok "antigravity skills installed"
+    } catch {
+        Warn "antigravity install skipped or failed (non-fatal)"
+    }
+}
+
+# =============================================================================
+# PHASE 8 — Clone reference repos
+# =============================================================================
+if (-not $GsdOnly) {
+    Phase 8 "Clone reference repos to ~/.cursor/repos"
+    New-Item -ItemType Directory -Path (Join-Path $CursorDir "repos") -Force | Out-Null
+
+    $repos = @{
+        "agentmemory"               = "https://github.com/rohitg00/agentmemory"
+        "codegraph"                 = "https://github.com/colbymchenry/codegraph"
+        "antigravity-awesome-skills"= "https://github.com/sickn33/antigravity-awesome-skills"
+        "awesome-cursorrules"       = "https://github.com/PatrickJS/awesome-cursorrules"
+    }
+    foreach ($entry in $repos.GetEnumerator()) {
+        $dest = Join-Path $CursorDir "repos\$($entry.Key)"
+        if (-not (Test-Path $dest)) {
+            Write-Host "  Cloning $($entry.Key) ..." -NoNewline
+            try { git clone --depth 1 $entry.Value $dest 2>$null; Write-Host " ok" -ForegroundColor Green }
+            catch { Write-Host " WARN — clone failed (non-fatal)" -ForegroundColor Yellow }
+        } else {
+            Info "Already exists: $($entry.Key)"
+        }
+    }
+}
+
+# =============================================================================
+# PHASE 9 — gitnexus availability
+# =============================================================================
+if (-not $GsdOnly) {
+    Phase 9 "gitnexus availability"
+    $gnx = Get-Command gitnexus -ErrorAction SilentlyContinue
+    if ($gnx) {
+        Ok "gitnexus found ($($gnx.Source))"
+    } else {
+        Write-Host "  Installing gitnexus globally ..." -NoNewline
+        try { npm install -g gitnexus 2>$null; Write-Host " ok" -ForegroundColor Green }
+        catch { Write-Host " WARN — failed; use: npx gitnexus analyze" -ForegroundColor Yellow }
+    }
+}
+
+# =============================================================================
+# PHASE 10 — Write POWERUP-INSTALLED.md
+# =============================================================================
+Phase 10 "Finalize & write POWERUP-INSTALLED.md"
+
+$installedAt = Get-Date -Format "yyyy-MM-dd HH:mm K"
+$installedMd = @"
+# cursor-powered-up installation record
+
+| Field   | Value |
+|---------|-------|
+| Version | 2.0.0 |
+| Date    | $installedAt |
+| Source  | $ScriptDir |
+| Target  | $CursorDir |
+
+## What was installed
+
+- GSD for Cursor (commands, agents, workflows, templates, references, hooks)
+- Global npm tools: @agentmemory/agentmemory, @colbymchenry/codegraph, agnix
+- MCP wired: agentmemory, playwright, github
+- antigravity safe skills bundle
+- Reference repos cloned to ~/.cursor/repos/
+- Hooks: gsd-check-update, gsd-powerup-reminder, gsd-statusline
+
+## Update
+
+``````powershell
+cd <cursor-powered-up-repo>
+git pull
+.\scripts\install.ps1 -Force
+``````
+"@
+
+Set-Content (Join-Path $CursorDir "POWERUP-INSTALLED.md") $installedMd -Encoding UTF8
+Ok "Wrote ~/.cursor/POWERUP-INSTALLED.md"
+
+# =============================================================================
+# PHASE 11 — Final checklist
+# =============================================================================
+Phase 11 "Final checklist"
+
 Write-Host ""
-
+Write-Host "╔══════════════════════════════════════════╗" -ForegroundColor Green
+Write-Host "║   cursor-powered-up  installed!          ║" -ForegroundColor Green
+Write-Host "╚══════════════════════════════════════════╝" -ForegroundColor Green
+Write-Host ""
+Write-Host "Manual steps required:" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  1. Set your GitHub PAT in PowerShell profile (then restart terminal):" -ForegroundColor White
+Write-Host '     $env:GITHUB_PERSONAL_ACCESS_TOKEN = "ghp_your_token_here"' -ForegroundColor Gray
+Write-Host '     Add-Content $PROFILE "`n`$env:GITHUB_PERSONAL_ACCESS_TOKEN = ''ghp_your_token_here''"'  -ForegroundColor Gray
+Write-Host ""
+Write-Host "  2. Every coding session — run in a terminal (keep open):" -ForegroundColor White
+Write-Host "     agentmemory" -ForegroundColor Gray
+Write-Host ""
+Write-Host "  3. Restart Cursor IDE (for MCP + hooks to take effect)" -ForegroundColor White
+Write-Host ""
+Write-Host "  4. Per project:" -ForegroundColor White
+Write-Host "     /gsd-new-project   <- first time" -ForegroundColor Gray
+Write-Host "     /gsd-map-codebase  <- brownfield projects" -ForegroundColor Gray
+Write-Host ""
+Write-Host "  5. To verify:" -ForegroundColor White
+Write-Host "     Get-Content ~/.cursor/POWERUP-INSTALLED.md" -ForegroundColor Gray
+Write-Host "     where.exe agentmemory codegraph agnix" -ForegroundColor Gray
+Write-Host "     Get-Content ~/.cursor/mcp.json" -ForegroundColor Gray
+Write-Host ""
+Write-Host "  Docs: docs/PORTABLE-SETUP.md" -ForegroundColor White
+Write-Host ""

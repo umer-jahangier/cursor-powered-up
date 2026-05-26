@@ -31,6 +31,7 @@ This is the most leveraged moment in any project. Deep questioning here means be
 
 @~/.cursor/get-shit-done/references/questioning.md
 @~/.cursor/get-shit-done/references/ui-brand.md
+@~/.cursor/get-shit-done/references/cursor-powerup-bootstrap.md
 @~/.cursor/get-shit-done/templates/project.md
 @~/.cursor/get-shit-done/templates/requirements.md
 
@@ -65,6 +66,36 @@ This is the most leveraged moment in any project. Deep questioning here means be
    ```
 
    **You MUST run all bash commands above using the Bash tool before proceeding.**
+
+## Phase 1.5: Cursor Power-Up Bootstrap (MANDATORY)
+
+**Run immediately after Phase 1 setup — before brownfield offer or questioning.**
+
+Display banner:
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ GSD ► CURSOR POWER-UP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Wiring agent stack for this repo (CodeGraph, GitNexus, rules)...
+```
+
+Follow every step in `cursor-powerup-bootstrap.md`:
+
+1. **Execute the bootstrap bash block** using the Bash tool (codegraph index, gitnexus analyze, copy rules, write `.planning/CURSOR-POWERUP.md`, update `.gitignore`).
+2. **Run verify-setup.sh** and agentmemory health check; if agentmemory is down, tell the user once: run `agentmemory` in a terminal (global — not per-repo).
+3. **Read `AGENTS.md`** if created — use it as structural context during questioning and planning.
+4. **Do not block** on power-up failures: log WARN, continue GSD flow, note failures in `.planning/CURSOR-POWERUP.md`.
+
+**Skip only if** `.planning/CURSOR-POWERUP.md` exists and is newer than 7 days (re-run if user asks or codebase changed heavily).
+
+**Agent behavior for this project (enforce throughout GSD):**
+
+- Explore via CodeGraph/GitNexus MCP before large grep/read sprees.
+- Apply matching `.cursor/rules/*.mdc` and global skills (`~/.cursor/skills/`).
+- Store/recall durable decisions via agentmemory when available.
+- Act as a **master developer**: precise, minimal diffs, verify with tests/git diff, no hallucinated APIs.
 
 ## Phase 2: Brownfield Offer
 
@@ -944,8 +975,20 @@ Present completion with next steps:
 | Research       | `.planning/research/`       |
 | Requirements   | `.planning/REQUIREMENTS.md` |
 | Roadmap        | `.planning/ROADMAP.md`      |
+| Agent stack    | `.planning/CURSOR-POWERUP.md` + `AGENTS.md` |
 
 **[N] phases** | **[X] requirements** | Ready to build ✓
+
+**Cursor power-ups:** CodeGraph + GitNexus indexed · rules in `.cursor/rules/` · global skills/MCP active
+
+### Reminders (you — not automated)
+
+| When | Action |
+|------|--------|
+| Each Mac session | Run `agentmemory` in a terminal |
+| GitHub MCP | `export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_...` in `~/.zshrc`, restart Cursor |
+| After each `/gsd-execute-phase` | Re-index runs automatically; watch for WARN lines |
+| New Mac | `install.sh --force` + `install-cursor-powerup.sh` from your gsd-for-cursor fork |
 
 ───────────────────────────────────────────────────────────────
 
@@ -987,6 +1030,7 @@ Present completion with next steps:
 
 - [ ] .planning/ directory created
 - [ ] Git repo initialized
+- [ ] Cursor power-up bootstrap completed (`.planning/CURSOR-POWERUP.md`, CodeGraph, GitNexus, rules)
 - [ ] Brownfield detection completed
 - [ ] Deep questioning completed (threads followed, not rushed)
 - [ ] PROJECT.md captures full context → **committed**

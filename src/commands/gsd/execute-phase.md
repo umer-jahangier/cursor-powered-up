@@ -24,6 +24,7 @@ Context budget: ~15% orchestrator, 100% fresh per subagent.
 
 <execution_context>
 @~/.cursor/get-shit-done/references/ui-brand.md
+@~/.cursor/get-shit-done/references/cursor-powerup-reindex.md
 @~/.cursor/get-shit-done/workflows/execute-phase.md
 </execution_context>
 
@@ -94,7 +95,20 @@ Phase: $ARGUMENTS
    git add -u && git commit -m "fix({phase}): orchestrator corrections"
    ```
 
-   **If clean:** Continue to verification.
+   **If clean:** Continue to re-index.
+
+6.5. **Refresh Cursor agent indexes (automatic)**
+
+   After all plans in the phase have executed (code may have changed significantly):
+
+   ```bash
+   export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
+   bash ~/.cursor/get-shit-done/scripts/cursor-powerup-reindex.sh
+   ```
+
+   - Run via Bash tool. Do not skip unless script is missing.
+   - If script missing: run commands from `cursor-powerup-reindex.md` manually.
+   - Surface the script's **Manual checks** section to the user (agentmemory, GitHub PAT) in ≤4 lines.
 
 7. **Verify phase goal**
    Check config: `WORKFLOW_VERIFIER=$(cat .planning/config.json 2>/dev/null | grep -o '"verifier"[[:space:]]*:[[:space:]]*[^,}]*' | grep -o 'true\|false' || echo "true")`
@@ -330,6 +344,8 @@ After all plans in phase complete (step 7):
 <success_criteria>
 - [ ] All incomplete plans in phase executed
 - [ ] Each plan has SUMMARY.md
+- [ ] cursor-powerup-reindex.sh run (or equivalent) before verification
+- [ ] User reminded of manual global steps if health checks failed
 - [ ] Phase goal verified (must_haves checked against codebase)
 - [ ] VERIFICATION.md created in phase directory
 - [ ] STATE.md reflects phase completion

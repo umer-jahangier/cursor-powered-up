@@ -21,6 +21,7 @@ Output: .planning/codebase/ folder with 7 structured documents about the codebas
 
 <execution_context>
 @~/.cursor/get-shit-done/workflows/map-codebase.md
+@~/.cursor/get-shit-done/references/cursor-powerup-bootstrap.md
 </execution_context>
 
 <context>
@@ -49,6 +50,7 @@ Check for .planning/STATE.md - loads context if project already initialized
 </when_to_use>
 
 <process>
+0. **If `.planning/CURSOR-POWERUP.md` is missing:** run Phase 1.5 from `cursor-powerup-bootstrap.md` (CodeGraph, GitNexus, rules) before mapping.
 1. Check if .planning/codebase/ already exists (offer to refresh or skip)
 2. Create .planning/codebase/ directory structure
 3. Spawn 4 parallel gsd-codebase-mapper agents:
