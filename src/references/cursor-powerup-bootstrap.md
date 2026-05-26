@@ -56,10 +56,33 @@ if [ -f Cargo.toml ]; then
   cp -n "$RULES_SRC"/rust*.mdc .cursor/rules/ 2>/dev/null || true
 fi
 
-# 5. .gitignore entries
-for entry in .codegraph/; do
+# 5. .gitignore — add standard entries (never duplicate, preserve existing)
+# Full template documented in: references/gitignore-template.md
+GITIGNORE_ENTRIES=(
+  ".env" ".env.*" "!.env.example"
+  ".codegraph/"
+  ".cursor/projects/"
+  "__pycache__/" "*.py[cod]" "*.pyo"
+  ".pytest_cache/" ".mypy_cache/" ".ruff_cache/"
+  ".coverage" "htmlcov/"
+  "node_modules/" "dist/" "build/" ".next/" "out/" ".turbo/"
+  "*.log" "logs/"
+  ".DS_Store" "Thumbs.db" "*.swp" "*.swo"
+  ".idea/" ".vscode/"
+  "output/"
+  "*.egg-info/"
+)
+for entry in "${GITIGNORE_ENTRIES[@]}"; do
   grep -qxF "$entry" .gitignore 2>/dev/null || echo "$entry" >> .gitignore
 done
+# Stack-specific additions
+if ls *.py app.py main.py requirements.txt pyproject.toml 2>/dev/null | grep -q .; then
+  for entry in "venv/" ".venv/"; do
+    grep -qxF "$entry" .gitignore 2>/dev/null || echo "$entry" >> .gitignore
+  done
+fi
+if [ -f go.mod ]; then grep -qxF "vendor/" .gitignore 2>/dev/null || echo "vendor/" >> .gitignore; fi
+if [ -f Cargo.toml ]; then grep -qxF "target/" .gitignore 2>/dev/null || echo "target/" >> .gitignore; fi
 
 # 6. Status file
 cat > "$POWERUP_LOG" <<EOF
@@ -70,6 +93,7 @@ cat > "$POWERUP_LOG" <<EOF
 | CodeGraph | $([ -d .codegraph ] && echo done || echo skipped) |
 | GitNexus | $([ -f AGENTS.md ] && echo done || echo partial) |
 | Cursor rules | $(ls .cursor/rules/*.mdc 2>/dev/null | wc -l | tr -d ' ') rules in .cursor/rules/ |
+|| .gitignore | $([ -f .gitignore ] && echo updated || echo created) |
 
 ## Agent instructions
 
@@ -91,8 +115,8 @@ EOF
 1. Read `AGENTS.md` (if created) and `.planning/CURSOR-POWERUP.md`.
 2. Mention power-up status in one line when starting questioning (no long lecture).
 3. Commit bootstrap artifacts with first project commit if `commit_docs` is yes:
-   - `AGENTS.md`, `.cursor/rules/`, `.planning/CURSOR-POWERUP.md`
-   - Do **not** commit `.codegraph/` (gitignored)
+   - `AGENTS.md`, `.cursor/rules/`, `.planning/CURSOR-POWERUP.md`, `.gitignore`
+   - Do **not** commit `.codegraph/` (it is gitignored by the step above)
 
 ## Verify global stack
 

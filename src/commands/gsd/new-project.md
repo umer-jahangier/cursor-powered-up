@@ -32,6 +32,7 @@ This is the most leveraged moment in any project. Deep questioning here means be
 @~/.cursor/get-shit-done/references/questioning.md
 @~/.cursor/get-shit-done/references/ui-brand.md
 @~/.cursor/get-shit-done/references/cursor-powerup-bootstrap.md
+@~/.cursor/get-shit-done/references/gitignore-template.md
 @~/.cursor/get-shit-done/templates/project.md
 @~/.cursor/get-shit-done/templates/requirements.md
 
@@ -83,7 +84,8 @@ Wiring agent stack for this repo (CodeGraph, GitNexus, rules)...
 
 Follow every step in `cursor-powerup-bootstrap.md`:
 
-1. **Execute the bootstrap bash block** using the Bash tool (codegraph index, gitnexus analyze, copy rules, write `.planning/CURSOR-POWERUP.md`, update `.gitignore`).
+1. **Execute the bootstrap bash block** using the Bash tool (codegraph index, gitnexus analyze, copy rules, create/update `.gitignore` from template, write `.planning/CURSOR-POWERUP.md`).
+   - `.gitignore` is created if missing or updated (missing lines appended) — secrets, build artifacts, OS junk, and stack-specific entries are all added; `.cursor/rules/` is intentionally **not** ignored.
 2. **Run verify-setup.sh** and agentmemory health check; if agentmemory is down, tell the user once: run `agentmemory` in a terminal (global — not per-repo).
 3. **Read `AGENTS.md`** if created — use it as structural context during questioning and planning.
 4. **Do not block** on power-up failures: log WARN, continue GSD flow, note failures in `.planning/CURSOR-POWERUP.md`.
@@ -976,6 +978,7 @@ Present completion with next steps:
 | Requirements   | `.planning/REQUIREMENTS.md` |
 | Roadmap        | `.planning/ROADMAP.md`      |
 | Agent stack    | `.planning/CURSOR-POWERUP.md` + `AGENTS.md` |
+| Gitignore      | `.gitignore` (created/updated) |
 
 **[N] phases** | **[X] requirements** | Ready to build ✓
 
@@ -1030,6 +1033,7 @@ Present completion with next steps:
 
 - [ ] .planning/ directory created
 - [ ] Git repo initialized
+- [ ] `.gitignore` created/updated — secrets, build artifacts, OS junk excluded; `.cursor/rules/` NOT ignored
 - [ ] Cursor power-up bootstrap completed (`.planning/CURSOR-POWERUP.md`, CodeGraph, GitNexus, rules)
 - [ ] Brownfield detection completed
 - [ ] Deep questioning completed (threads followed, not rushed)

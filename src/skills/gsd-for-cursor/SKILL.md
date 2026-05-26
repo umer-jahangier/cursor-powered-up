@@ -20,7 +20,7 @@ Source repo: `cursor-powered-up` → `./scripts/install.sh` installs everything 
 
 | When | What |
 |------|------|
-| `/gsd-new-project` | CodeGraph init/index, GitNexus, `.cursor/rules/`, `CURSOR-POWERUP.md` |
+| `/gsd-new-project` | CodeGraph init/index, GitNexus, `.cursor/rules/`, `CURSOR-POWERUP.md`, `.gitignore` bootstrap |
 | `/gsd-map-codebase` | Same bootstrap if `CURSOR-POWERUP.md` missing |
 | `/gsd-execute-phase` | `cursor-powerup-reindex.sh` after plans, before verification |
 | While coding | CodeGraph MCP file watcher (incremental sync) |
@@ -57,6 +57,7 @@ See `docs/PORTABLE-SETUP.md` in the repo.
 ## References
 
 - Bootstrap: `~/.cursor/get-shit-done/references/cursor-powerup-bootstrap.md`
+- Gitignore template: `~/.cursor/get-shit-done/references/gitignore-template.md`
 - Re-index: `~/.cursor/get-shit-done/references/cursor-powerup-reindex.md`
 - Portable setup: `docs/PORTABLE-SETUP.md`
 
