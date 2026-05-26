@@ -52,7 +52,8 @@ That's it. The installer handles everything — see [what it does](#what-the-ins
 | 4 | Copy GSD commands, agents, workflows, templates, references, hooks to `~/.cursor/` |
 | 5 | `agentmemory connect cursor` (wire memory MCP) |
 | 6 | Ensure `playwright` + `github` entries in `~/.cursor/mcp.json` |
-| 7 | `npx antigravity-awesome-skills` — safe dev/backend/frontend/security bundle |
+| 7 | `npx antigravity-awesome-skills` — safe **development + backend** bundle |
+| 7b | Install [UI-UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) skill to `~/.cursor/skills/ui-ux-pro-max/` |
 | 8 | Shallow-clone reference repos to `~/.cursor/repos/` |
 | 9 | Install / verify `gitnexus` (falls back to `npx gitnexus`) |
 | 10 | `chmod` scripts, write `~/.cursor/POWERUP-INSTALLED.md` |

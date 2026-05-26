@@ -387,10 +387,52 @@ phase 7 "antigravity safe skills bundle"
 mkdir -p "$CURSOR_DIR/skills"
 npx --yes antigravity-awesome-skills \
     --path "$CURSOR_DIR/skills" \
-    --category development,backend,frontend,security \
+    --category development,backend \
     --risk safe 2>/dev/null \
     && ok "antigravity skills installed" \
     || warn "antigravity install skipped or failed (non-fatal)"
+fi  # end GSD_ONLY skip
+
+# =============================================================================
+# PHASE 7b — Install UI-UX Pro Max skill
+# =============================================================================
+if [[ "$GSD_ONLY" = false ]]; then
+phase "7b" "UI-UX Pro Max skill"
+
+mkdir -p "$CURSOR_DIR/skills"
+UUPM_SKILL_DIR="$CURSOR_DIR/skills/ui-ux-pro-max"
+
+if [[ -d "$UUPM_SKILL_DIR" ]] && [[ "$FORCE" = false ]]; then
+    info "ui-ux-pro-max already installed at $UUPM_SKILL_DIR"
+else
+    # Try uipro-cli first (installs from NPM, always latest)
+    if command -v uipro &>/dev/null || npm list -g uipro-cli &>/dev/null 2>&1; then
+        echo -n "  Installing via uipro-cli ... "
+        (cd "$HOME" && npx --yes uipro-cli init --ai cursor --force 2>/dev/null) \
+            && ok "ui-ux-pro-max installed via uipro-cli" \
+            || warn "uipro-cli install failed, falling back to git clone"
+    fi
+
+    # Fallback: shallow git clone
+    if [[ ! -f "$UUPM_SKILL_DIR/SKILL.md" ]]; then
+        echo -n "  Cloning ui-ux-pro-max via git ... "
+        git clone --depth 1 https://github.com/nextlevelbuilder/ui-ux-pro-max-skill /tmp/ui-ux-pro-max-skill 2>/dev/null \
+            && mkdir -p "$UUPM_SKILL_DIR" \
+            && cp -r /tmp/ui-ux-pro-max-skill/.cursor/skills/ui-ux-pro-max/. "$UUPM_SKILL_DIR/" 2>/dev/null \
+            && ok "ui-ux-pro-max installed via git clone" \
+            || warn "ui-ux-pro-max install failed (non-fatal) — install manually: uipro init --ai cursor"
+        rm -rf /tmp/ui-ux-pro-max-skill 2>/dev/null || true
+    fi
+
+    # Add YAML frontmatter if SKILL.md is missing it
+    if [[ -f "$UUPM_SKILL_DIR/SKILL.md" ]] && ! head -1 "$UUPM_SKILL_DIR/SKILL.md" | grep -q "^---"; then
+        TMPFILE="$(mktemp)"
+        printf -- '---\nname: ui-ux-pro-max\ndescription: AI skill providing design intelligence for UI/UX across multiple platforms. Features 67 styles, 161 color palettes, 57 font pairings, 99 UX guidelines, and 161 industry reasoning rules. Auto-activates for UI/UX requests in Cursor.\n---\n\n' > "$TMPFILE"
+        cat "$UUPM_SKILL_DIR/SKILL.md" >> "$TMPFILE"
+        mv "$TMPFILE" "$UUPM_SKILL_DIR/SKILL.md"
+        info "Added YAML frontmatter to SKILL.md"
+    fi
+fi
 fi  # end GSD_ONLY skip
 
 # =============================================================================
@@ -462,6 +504,7 @@ cat > "$CURSOR_DIR/POWERUP-INSTALLED.md" << EOF
 - Global npm tools: @agentmemory/agentmemory, @colbymchenry/codegraph, agnix
 - MCP wired: agentmemory, playwright, github
 - antigravity safe skills bundle
+- UI-UX Pro Max skill (~/.cursor/skills/ui-ux-pro-max/)
 - Reference repos cloned to ~/.cursor/repos/
 - Hooks: gsd-check-update, gsd-powerup-reminder, gsd-statusline
 

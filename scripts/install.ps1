@@ -308,11 +308,34 @@ if (-not $GsdOnly) {
     try {
         npx --yes antigravity-awesome-skills `
             --path (Join-Path $CursorDir "skills") `
-            --category development,backend,frontend,security `
+            --category development,backend `
             --risk safe 2>$null
         Ok "antigravity skills installed"
     } catch {
         Warn "antigravity install skipped or failed (non-fatal)"
+    }
+}
+
+# =============================================================================
+# PHASE 7b — UI-UX Pro Max skill
+# =============================================================================
+if (-not $GsdOnly) {
+    Phase "7b" "UI-UX Pro Max skill"
+    $uupmDir = Join-Path $CursorDir "skills\ui-ux-pro-max"
+    if ((Test-Path (Join-Path $uupmDir "SKILL.md")) -and -not $Force) {
+        Info "ui-ux-pro-max already installed at $uupmDir"
+    } else {
+        $tmp = Join-Path $env:TEMP "ui-ux-pro-max-skill"
+        Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
+        try {
+            git clone --depth 1 https://github.com/nextlevelbuilder/ui-ux-pro-max-skill $tmp 2>$null
+            New-Item -ItemType Directory -Path $uupmDir -Force | Out-Null
+            Copy-Item -Recurse -Force (Join-Path $tmp ".cursor\skills\ui-ux-pro-max\*") $uupmDir
+            Ok "ui-ux-pro-max installed via git clone"
+        } catch {
+            Warn "ui-ux-pro-max install failed (non-fatal)"
+        }
+        Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
     }
 }
 

@@ -11,6 +11,7 @@ Run during `/gsd-new-project` Phase 1.5 and when onboarding any repo. Global too
 | MCP `~/.cursor/mcp.json` | `.cursor/rules/*.mdc` |
 | agentmemory, Playwright, GitHub MCP | `.planning/CURSOR-POWERUP.md` status |
 | 21st.dev MCP (optional, user API key) | — |
+| `ui-ux-pro-max` skill (auto-installed) | — |
 
 **agentmemory:** User must run `agentmemory` in a terminal (global server). Remind once if health check fails.
 
@@ -36,6 +37,7 @@ npx -y @21st-dev/cli@latest install cursor --api-key "YOUR_21ST_DEV_API_KEY"
 Keys available at [21st.dev](https://21st.dev). The CLI writes the MCP entry to `~/.cursor/mcp.json`. Restart Cursor afterwards and verify: **Cursor Settings → MCP → 21st = green**.
 
 **Frontend skills that pair with 21st.dev** (already installed at `~/.cursor/skills/`):
+- `ui-ux-pro-max` — **auto-installed** — 67 styles, 161 color palettes, 57 font pairings, 161 industry reasoning rules; auto-activates for any UI/UX request ([github.com/nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill))
 - `design-taste-frontend` — high-agency UI with calibrated color and motion
 - `high-end-visual-design` — agency-grade premium interfaces
 - `gpt-taste` — GSAP-heavy pages with wide hero typography and bento grids

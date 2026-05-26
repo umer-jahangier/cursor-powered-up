@@ -68,8 +68,9 @@ Replace `YOUR_21ST_DEV_API_KEY` with your actual key. The CLI writes the MCP ent
 | Tailwind + shadcn-compatible output | Integrates cleanly with modern stacks |
 | Design system coherence | Consistent tokens across generated components |
 
-The following skills already installed at `~/.cursor/skills/` pair naturally with 21st.dev:
+Skills installed by `install.sh` that pair with 21st.dev:
 
+- `ui-ux-pro-max` — **auto-installed** — 67 styles, 161 color palettes, 57 font pairings, 161 industry reasoning rules ([ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill))
 - `design-taste-frontend` — high-agency interfaces with calibrated color and motion
 - `high-end-visual-design` — agency-grade premium interfaces
 - `gpt-taste` — GSAP-heavy pages with wide hero typography and bento grids
@@ -140,6 +141,7 @@ curl -sf http://localhost:3111/agentmemory/health && echo "agentmemory OK" || ec
 [ ] Cursor restarted (after install.sh)
 [ ] PATH + GITHUB_PERSONAL_ACCESS_TOKEN in ~/.zshrc
 [ ] agentmemory running in a terminal each session
+[ ] ui-ux-pro-max at ~/.cursor/skills/ui-ux-pro-max/ (auto by install.sh)
 [ ] 21st.dev MCP installed — Cursor Settings → MCP → 21st = green
 [ ] framer-motion added to React projects (npm install framer-motion)
 [ ] /gsd-new-project or /gsd-map-codebase run in each repo
