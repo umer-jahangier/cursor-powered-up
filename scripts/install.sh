@@ -417,8 +417,6 @@ clone_if_missing agentmemory              "https://github.com/rohitg00/agentmemo
 clone_if_missing codegraph                "https://github.com/colbymchenry/codegraph"
 clone_if_missing antigravity-awesome-skills "https://github.com/sickn33/antigravity-awesome-skills"
 clone_if_missing awesome-cursorrules      "https://github.com/PatrickJS/awesome-cursorrules"
-# gitnexus — clone if public
-clone_if_missing gitnexus                 "https://github.com/umer-jahangier/gitnexus" 2>/dev/null || true
 fi  # end GSD_ONLY skip
 
 # =============================================================================
