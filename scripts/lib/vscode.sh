@@ -39,7 +39,7 @@ else
     info "ui-ux-pro-max already installed"
 fi
 
-source "$SCRIPT_DIR/bundled-skills.sh"
+source "$SCRIPT_DIR/lib/bundled-skills.sh"
 install_bundled_skills "$VSCODE_SKILLS"
 ok "Bundled skills from src/skills/"
 
