@@ -39,6 +39,10 @@ else
     info "ui-ux-pro-max already installed"
 fi
 
+source "$SCRIPT_DIR/bundled-skills.sh"
+install_bundled_skills "$ANTIGRAVITY_SKILLS"
+ok "Bundled skills from src/skills/"
+
 SKILL_COUNT=$(find "$ANTIGRAVITY_SKILLS" -name "SKILL.md" 2>/dev/null | wc -l | tr -d ' ')
 ok "Total skills installed: $SKILL_COUNT"
 

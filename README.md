@@ -80,8 +80,9 @@ Which IDE(s) would you like to install for?
 | Browser automation | Playwright MCP | Auto | All |
 | GitHub integration | GitHub MCP | Auto | All |
 | Codebase graph | CodeGraph + GitNexus | Auto | All |
-| Safe skills bundle | antigravity development,backend (1,400+) | Auto | All |
+| Safe skills bundle | antigravity development,backend | Auto | All |
 | ui-ux-pro-max | Premium UI/UX skill | Auto | All |
+| animation-designer | Framer Motion, GSAP, R3F, Lenis, shaders | Auto | All |
 | GSD workflows | 27 `/gsd-*` commands | Auto | **Cursor only** |
 | **21st.dev MCP** | **UI component generation** | **Post-install** | Cursor, VS Code |
 | **Framer Motion** | **Animation library** | **Per-project** | All |
@@ -108,6 +109,7 @@ Which IDE(s) would you like to install for?
 | C2 | `agentmemory connect cursor` |
 | C3 | Ensure `playwright` + `github` in `~/.cursor/mcp.json` |
 | C4 | `npx antigravity-awesome-skills --path ~/.cursor/skills --category development,backend --risk safe` |
+| C4b | Bundled skills: `gsd-for-cursor`, `animation-designer`, … from `src/skills/` |
 
 ### VS Code-specific phases
 

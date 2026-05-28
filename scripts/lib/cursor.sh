@@ -78,11 +78,10 @@ if [ -f "$REINDEX_SRC" ]; then
     ok "Copied cursor-powerup-reindex.sh"
 fi
 
-if [ -f "$SOURCE_PATH/skills/gsd-for-cursor/SKILL.md" ]; then
-    mkdir -p "$CURSOR_SKILLS/gsd-for-cursor"
-    cp "$SOURCE_PATH/skills/gsd-for-cursor/SKILL.md" "$CURSOR_SKILLS/gsd-for-cursor/SKILL.md"
-    ok "Copied gsd-for-cursor skill"
-fi
+# Bundled repo skills (gsd-for-cursor, animation-designer, ...)
+source "$SCRIPT_DIR/bundled-skills.sh"
+install_bundled_skills "$CURSOR_SKILLS"
+ok "Bundled skills from src/skills/"
 
 # Cursor settings.json (hooks + statusline)
 settings_path="$CURSOR_DIR/settings.json"
