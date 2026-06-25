@@ -42,6 +42,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`immersive-3d-web` bundled skill** — scroll-scrubbed frame sequences, WebGL / Three.js /
+  R3F scenes, glass shaders, asset pipeline scripts, and reference gallery for immersive /
+  Awwwards-style sites. Installed automatically via `src/skills/` for Cursor, VS Code, and
+  Antigravity.
+
 ## [1.0.0] - 2026-01-25
 
 ### Added

@@ -78,7 +78,7 @@ if [ -f "$REINDEX_SRC" ]; then
     ok "Copied cursor-powerup-reindex.sh"
 fi
 
-# Bundled repo skills (gsd-for-cursor, animation-designer, ...)
+# Bundled repo skills (gsd-for-cursor, animation-designer, immersive-3d-web, ...)
 source "$SCRIPT_DIR/lib/bundled-skills.sh"
 install_bundled_skills "$CURSOR_SKILLS"
 ok "Bundled skills from src/skills/"

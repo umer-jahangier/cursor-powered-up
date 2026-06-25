@@ -60,6 +60,8 @@ Restart **Cursor** after first install (MCP + hooks take effect on restart).
 | `src/references/*` | `~/.cursor/get-shit-done/references/` |
 | `src/hooks/*` | `~/.cursor/hooks/` |
 | `src/skills/gsd-for-cursor/` | `~/.cursor/skills/gsd-for-cursor/` |
+| `src/skills/animation-designer/` | `~/.cursor/skills/animation-designer/` |
+| `src/skills/immersive-3d-web/` | `~/.cursor/skills/immersive-3d-web/` |
 | `scripts/cursor-powerup-reindex.sh` | `~/.cursor/get-shit-done/scripts/` |
 
 **Not in repo** (machine state): `~/.cursor/mcp.json` secrets, agentmemory DB, `.codegraph/` per project.

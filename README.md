@@ -83,6 +83,7 @@ Which IDE(s) would you like to install for?
 | Safe skills bundle | antigravity development,backend | Auto | All |
 | ui-ux-pro-max | Premium UI/UX skill | Auto | All |
 | animation-designer | Framer Motion, GSAP, R3F, Lenis, shaders | Auto | All |
+| immersive-3d-web | Scroll-scrubbed sequences, WebGL, glass shaders, Awwwards-style sites | Auto | All |
 | GSD workflows | 27 `/gsd-*` commands | Auto | **Cursor only** |
 | **21st.dev MCP** | **UI component generation** | **Post-install** | Cursor, VS Code |
 | **Framer Motion** | **Animation library** | **Per-project** | All |
@@ -109,7 +110,7 @@ Which IDE(s) would you like to install for?
 | C2 | `agentmemory connect cursor` |
 | C3 | Ensure `playwright` + `github` in `~/.cursor/mcp.json` |
 | C4 | `npx antigravity-awesome-skills --path ~/.cursor/skills --category development,backend --risk safe` |
-| C4b | Bundled skills: `gsd-for-cursor`, `animation-designer`, … from `src/skills/` |
+| C4b | Bundled skills: `gsd-for-cursor`, `animation-designer`, `immersive-3d-web`, … from `src/skills/` |
 
 ### VS Code-specific phases
 

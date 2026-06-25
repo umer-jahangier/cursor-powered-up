@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Scroll-scrubbed frame sequence starter</title>
+<!--
+  Drop-in starter for the "video opens as you scroll" effect.
+  1. Put your frames in /frames as frame_0001.webp ... (use extract_frames.sh).
+  2. Set FRAME_COUNT and the path template below.
+  3. Tune END (track length) for scrub feel: ~8-20 scroll px per frame.
+  Real content stays in the DOM for SEO and accessibility; the canvas is decoration.
+-->
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; }
+  body { background:#0b0b0f; color:#fff; font:16px/1.5 system-ui, sans-serif; }
+  .lead, .outro { min-height:60vh; display:grid; place-items:center; padding:8vh 6vw; text-align:center; }
+  .seq-section { position:relative; }
+  .seq-stage { position:sticky; top:0; height:100vh; }
+  canvas#seq { display:block; width:100%; height:100%; }
+  .seq-copy { position:absolute; inset:auto 0 12vh 0; text-align:center; pointer-events:none; }
+  h1 { font-size:clamp(2rem,6vw,5rem); letter-spacing:-0.02em; }
+  .muted { opacity:.65; max-width:42ch; margin-inline:auto; }
+  @media (prefers-reduced-motion: reduce) { .seq-stage { position:static; height:100vh; } }
+</style>
+</head>
+<body>
+
+  <section class="lead">
+    <div>
+      <h1>Hero headline in real HTML</h1>
+      <p class="muted">Scroll to scrub the sequence. This text is crawlable and accessible.</p>
+    </div>
+  </section>
+
+  <!-- The pinned sequence -->
+  <section class="seq-section" id="seq-section">
+    <div class="seq-stage">
+      <canvas id="seq" aria-label="Animated product sequence" role="img"></canvas>
+      <div class="seq-copy"><p class="muted" id="seq-caption">Frame 1</p></div>
+    </div>
+  </section>
+
+  <section class="outro">
+    <p class="muted">Content continues. The 3D moment is one beat in a normal page.</p>
+  </section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+gsap.registerPlugin(ScrollTrigger);
+
+const FRAME_COUNT = 147;                                  // set to your frame count
+const url = i => `/frames/frame_${String(i + 1).padStart(4, "0")}.webp`;
+const END = "+=" + (FRAME_COUNT * 14);                    // ~14 scroll px per frame
+
+const canvas = document.getElementById("seq");
+const ctx = canvas.getContext("2d", { alpha: false });
+const caption = document.getElementById("seq-caption");
+const images = [];
+const state = { frame: 0 };
+
+// Preload frames into memory (decode where supported) to avoid strobing.
+for (let i = 0; i < FRAME_COUNT; i++) {
+  const img = new Image();
+  img.src = url(i);
+  if (img.decode) img.decode().catch(() => {});
+  images[i] = img;
+}
+
+function render() {
+  const img = images[state.frame | 0];
+  if (!img || !img.complete || !img.naturalWidth) return;
+  const cover = Math.max(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight);
+  const w = img.naturalWidth * cover, h = img.naturalHeight * cover;
+  ctx.fillStyle = "#0b0b0f";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, (canvas.width - w) / 2, (canvas.height - h) / 2, w, h);
+  caption.textContent = "Frame " + ((state.frame | 0) + 1);
+}
+
+function resize() {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.floor(innerWidth * dpr);
+  canvas.height = Math.floor(innerHeight * dpr);
+  render();
+}
+let rt;
+addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(resize, 150); });
+resize();
+images[0].addEventListener("load", render, { once: true });
+
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+if (reduce) {
+  // Reduced motion: show a representative static frame, no scrubbing.
+  state.frame = Math.floor(FRAME_COUNT / 2);
+  images[state.frame].addEventListener("load", render, { once: true });
+  render();
+} else {
+  gsap.to(state, {
+    frame: FRAME_COUNT - 1,
+    snap: "frame",
+    ease: "none",
+    onUpdate: render,
+    scrollTrigger: {
+      trigger: "#seq-section",
+      start: "top top",
+      end: END,
+      pin: ".seq-stage",
+      scrub: 1
+    }
+  });
+  ScrollTrigger.refresh();
+}
+</script>
+</body>
+</html>
