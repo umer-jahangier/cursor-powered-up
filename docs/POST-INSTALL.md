@@ -1,178 +1,132 @@
 # Post-Install Guide — Enable Full Power
 
-> Run these steps **after** `./scripts/install.sh` completes.
-> The installer handles all the heavy lifting; these are the manual steps that require your own credentials and preferences.
+> Run these steps **after** `./scripts/install.sh` (or `install.ps1`) completes.
+> The installer handles everything it can. These steps need your own credentials or a per-project decision.
 
 ---
 
-## Step 1 — Restart Your IDE
+## Step 1 — Restart your agents
 
-The new MCP servers (agentmemory, playwright, github) only activate after a full restart.
-
-**Close and reopen your IDE** before continuing.
+New MCP servers, skills and plugins load at startup. **Quit and reopen** every IDE, and start a new session in every CLI agent (Claude Code, Codex, Gemini, `agy`, OpenCode).
 
 ---
 
-## Step 2 — Set Environment Variables
+## Step 2 — Set environment variables
 
-Add to `~/.zshrc` (macOS/Linux) or `~/.bashrc` (Linux):
+Add to `~/.zshrc` (macOS) or `~/.bashrc` (Linux):
 
 ```bash
 export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
 export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_your_token_here
 ```
 
-Then reload:
-
 ```bash
 source ~/.zshrc
 ```
 
-Get a GitHub PAT at [github.com/settings/tokens](https://github.com/settings/tokens) — scopes: `repo`, `read:org`.
+On Windows, add this to your PowerShell profile (`$PROFILE`):
+
+```powershell
+$env:GITHUB_PERSONAL_ACCESS_TOKEN = "ghp_your_token_here"
+```
+
+Create a token at [github.com/settings/tokens](https://github.com/settings/tokens) with the scopes `repo` and `read:org`.
+Every agent's GitHub MCP entry reads this variable in that agent's own syntax (see [IDE-PATHS.md](./IDE-PATHS.md#token-headers-github-mcp)). The token is never written into a config file.
 
 ---
 
-## Step 3 — Start agentmemory Each Session
-
-The agent memory server must be running for the memory MCP to work. Run this in a terminal and keep it open:
+## Step 3 — Start agentmemory each session
 
 ```bash
-agentmemory
-```
-
-> Tip: open a dedicated terminal tab for agentmemory and leave it running while you code.
-
----
-
-## Step 4 — 21st.dev MCP — UI Components
-
-[21st.dev](https://21st.dev) provides an MCP server that lets AI agents generate polished React UI components. **This step requires your own 21st.dev API key** (free tier available at [21st.dev dashboard](https://21st.dev)).
-
-### For Cursor
-
-```bash
-npx -y @21st-dev/cli@latest install cursor --api-key "YOUR_21ST_DEV_API_KEY"
-```
-
-### For VS Code
-
-```bash
-npx -y @21st-dev/cli@latest install vscode --api-key "YOUR_21ST_DEV_API_KEY"
-```
-
-### For Antigravity
-
-21st.dev CLI does not currently support Antigravity. Add the MCP entry manually to `mcp_config.json` if/when support is available.
-
-**After running the command:** restart your IDE, then verify the server is active in MCP settings.
-
----
-
-## Step 5 — Framer Motion (for animated React UI)
-
-21st.dev-generated components use [framer-motion](https://www.framer.com/motion/) for animations. Install it in each React/Next.js project:
-
-```bash
-npm install framer-motion
+agentmemory      # keep this terminal open; serves the memory MCP on :3111
 ```
 
 ---
 
-## Step 6 — Bootstrap Each Project (Cursor only)
+## Step 4 — 21st.dev Magic MCP
 
-For a **new project**:
+[21st.dev](https://21st.dev) Magic generates polished React UI components. It **needs your own API key** (free tier available).
 
+```bash
+# Claude Code
+claude mcp add magic --scope user --env API_KEY="YOUR_KEY" -- npx -y @21st-dev/magic@latest
+# Cursor / Windsurf / VS Code (best-effort)
+npx -y @21st-dev/cli@latest install cursor   --api-key "YOUR_KEY"
+npx -y @21st-dev/cli@latest install windsurf --api-key "YOUR_KEY"
+npx -y @21st-dev/cli@latest install vscode   --api-key "YOUR_KEY"
 ```
-/gsd-new-project
-```
 
-For an **existing codebase** (brownfield):
-
-```
-/gsd-map-codebase
-```
-
-This runs CodeGraph indexing and GitNexus analysis.
-
-> **Note:** GSD commands are Cursor-exclusive. VS Code and Antigravity users: run `codegraph init -i` in project roots for codebase indexing.
+For other agents, add the server to their MCP file by hand, using the formats in [IDE-PATHS.md](./IDE-PATHS.md).
+21st.dev components use [Motion](https://motion.dev). Install it per project with `npm install motion`, or `framer-motion` in older projects.
 
 ---
 
-## Step 7 — Verify the Full Setup
+## Step 5 — Per-project rules (every agent)
 
-### Cursor
-
-```bash
-# Tools installed
-which agentmemory codegraph agnix gitnexus
-
-# MCP wired
-cat ~/.cursor/mcp.json
-
-# Skills installed
-ls ~/.cursor/skills/ | wc -l
-
-# agentmemory health
-curl -sf http://localhost:3111/agentmemory/health && echo "OK" || echo "WARN: start agentmemory"
-```
-
-### VS Code
+Run this once in each repo so every agent follows the same rules:
 
 ```bash
-# Skills installed
-ls ~/.vscode/skills/ | wc -l
-
-# MCP config (macOS)
-cat "$HOME/Library/Application Support/Code/User/mcp.json"
-
-# Enable MCP discovery in VS Code settings:
-# chat.mcp.discovery.enabled = true
+node ~/path/to/cursor-powered-up/scripts/lib/powerup.mjs project-init --dir .
 ```
 
-### Antigravity
+It creates or appends `AGENTS.md`, and creates `CLAUDE.md` containing `@AGENTS.md` if you don't have one. It only appends, so existing content is kept.
 
-```bash
-# Skills installed
-ls ~/.agents/skills/ | wc -l
+**Cursor + GSD** — then bootstrap with:
 
-# MCP config (macOS)
-cat "$HOME/Library/Application Support/Antigravity/User/mcp_config.json"
 ```
+/gsd-new-project       # new project
+/gsd-map-codebase      # existing codebase (CodeGraph + GitNexus)
+```
+
+For other agents, run `codegraph init -i` and `npx gitnexus analyze` in the project root to build the code graphs.
 
 ---
 
-## Quick-Reference Checklist
+## Step 6 — See how your data flows (first run)
 
-### All IDEs
+Run these inside your agent, in the project:
 
-```
-[ ] IDE restarted after install
-[ ] PATH + GITHUB_PERSONAL_ACCESS_TOKEN in ~/.zshrc
-[ ] agentmemory running each session
-[ ] framer-motion added to React projects
-```
+| Command | Result |
+|---------|--------|
+| `/understand` then `/understand-dashboard` | Interactive knowledge graph: API → service → data → UI layers. The first run on a large repo takes a few minutes. |
+| `/understand-domain` | Business/request flow graph |
+| `/omm-scan`, then `omm view` in a terminal | Mermaid architecture and data-flow diagrams in `.omm/` (commit them) |
 
-### Cursor-specific
+Claude Code runs `/understand` as a plugin command. In other agents, ask for the skill by name, e.g. "use the understand skill".
+For **runtime** API → SQL traces, see AppMap in [SKILLS-AND-TOOLS.md](./SKILLS-AND-TOOLS.md#manual-only-tools).
 
-```
-[ ] 21st.dev MCP installed → Cursor Settings → MCP → 21st = green
-[ ] /gsd-new-project or /gsd-map-codebase run in each repo
-```
+---
 
-### VS Code-specific
+## Step 7 — Optional extras
 
-```
-[ ] chat.mcp.discovery.enabled = true in VS Code settings
-[ ] 21st.dev MCP installed
-[ ] MCP servers visible in Copilot chat tools
+```bash
+./scripts/install.sh --agents detected --mcp all          # figma, sentry, deepwiki, excalidraw, next-devtools
+./scripts/install.sh --agents detected --packs workflow   # Superpowers + Anthropic dev skills
 ```
 
-### Antigravity-specific
+Figma and Sentry ask you to sign in with OAuth the first time an agent uses them.
 
+---
+
+## Step 8 — Verify
+
+```bash
+node scripts/lib/powerup.mjs status                        # agents detected, skill counts, MCP files
+node scripts/lib/powerup.mjs all --dry-run                 # anything still missing? (should be all "exists")
+cat ~/.agents/POWERUP-INSTALLED.md                         # install record
+curl -sf http://localhost:3111/agentmemory/health && echo "memory OK"
 ```
-[ ] Skills discoverable via @skill-name in agent chat
-[ ] MCP servers active
-```
+
+Checks inside each agent:
+
+| Agent | Check |
+|-------|-------|
+| Claude Code | `claude mcp list` · `claude plugin list` · `/impeccable` |
+| Cursor | Settings → MCP (servers should be green) · `/gsd-help` |
+| Codex | `codex mcp list` |
+| Gemini CLI | `/mcp` · `/skills` |
+| VS Code | Enable `chat.mcp.discovery.enabled`, then check the tools list in Copilot Chat |
+| Antigravity | Agent panel → MCP servers |
 
 ---
 
@@ -180,16 +134,15 @@ cat "$HOME/Library/Application Support/Antigravity/User/mcp_config.json"
 
 | Issue | Fix |
 |-------|-----|
-| `agentmemory: command not found` | Add `$HOME/.npm-global/bin` to PATH (Step 2) |
-| GitHub MCP not working | Set `GITHUB_PERSONAL_ACCESS_TOKEN` and restart IDE |
-| 21st.dev MCP not responding | Re-run install command; verify key at 21st.dev dashboard |
-| GSD commands not found (Cursor) | Run `./scripts/install.sh --ide cursor --force` |
-| GitNexus stale index | Run `npx gitnexus analyze` in project root |
-| VS Code MCP tools not showing | Enable `chat.mcp.discovery.enabled` in settings |
-| Antigravity skills not found | Verify `~/.agents/skills/` contains SKILL.md files |
+| `agentmemory` / `omm` not found | Add `$HOME/.npm-global/bin` to PATH (Step 2), then open a new terminal |
+| GitHub MCP unauthorized | Set `GITHUB_PERSONAL_ACCESS_TOKEN`, then restart the agent |
+| Status table shows `skipped … not plain JSON` | That config has comments. Add the servers from `config/mcp-servers.json` by hand |
+| A skill didn't update | Re-run with `--force`. Existing skills are left alone by default |
+| `ui-ux-pro-max` search script fails | It needs `python3` on PATH |
+| Want to undo a config change | Every edited file has a `<file>.powerup-backup` of its original |
+| GSD commands missing (Cursor) | `./scripts/install.sh --agents cursor --force` |
+| Stale code graph | `npx gitnexus analyze` / `codegraph sync` in the project root |
 
 ---
 
-See also:
-- [docs/IDE-PATHS.md](./IDE-PATHS.md) for the full paths reference
-- [docs/PORTABLE-SETUP.md](./PORTABLE-SETUP.md) for setting up on a new machine
+See also: [IDE-PATHS.md](./IDE-PATHS.md) · [SKILLS-AND-TOOLS.md](./SKILLS-AND-TOOLS.md) · [PORTABLE-SETUP.md](./PORTABLE-SETUP.md)

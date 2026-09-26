@@ -29,6 +29,22 @@ Help improve the documentation:
 - Add examples
 - Update outdated information
 
+### 4. Skills, MCP servers and agents
+The power-up layer is config-driven, so most additions need no script changes:
+
+| To add… | Edit | Preview with |
+|---------|------|--------------|
+| A skill or skill repo | `config/skill-packs.json` | `node scripts/lib/powerup.mjs skills --dry-run` |
+| An MCP server | `config/mcp-servers.json` | `node scripts/lib/powerup.mjs mcp --agents all --dry-run` |
+| A global rule block | a new `src/rules/NN-name.md` (NN = order) | `node scripts/lib/powerup.mjs rules --dry-run` |
+| A new AI agent | `scripts/lib/agents.mjs` | `node scripts/lib/powerup.mjs status` |
+
+Before opening a PR, test real writes against a throwaway home directory:
+
+```bash
+SB=$(mktemp -d) && HOME=$SB npm_config_prefix=$SB/.npm-global node scripts/lib/powerup.mjs all --agents cursor,codex
+```
+
 ## Development Setup
 
 1. Clone the repository:

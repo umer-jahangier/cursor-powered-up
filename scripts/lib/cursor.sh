@@ -2,13 +2,18 @@
 # =============================================================================
 # cursor.sh — Cursor-specific install phases
 # =============================================================================
-# Handles: GSD copy, MCP wiring, agentmemory connect, skills, hooks
+# Handles: GSD copy + hooks, agentmemory connect, antigravity-awesome-skills.
+# Skill packs, bundled skills, MCP servers and rules are applied for every agent
+# by scripts/lib/powerup.mjs (called from install.sh).
 # =============================================================================
 
 CURSOR_DIR="$HOME/.cursor"
 CURSOR_SKILLS="$CURSOR_DIR/skills"
-CURSOR_MCP="$CURSOR_DIR/mcp.json"
 
+DO_GSD=true
+[[ "$POWERUP_ONLY" = true ]] && DO_GSD=false
+
+if [[ "$DO_GSD" = true ]]; then
 phase "C1" "Copy GSD files to ~/.cursor (Cursor-exclusive)"
 
 if [ ! -d "$SOURCE_PATH" ]; then
@@ -24,9 +29,13 @@ if [ -d "$CURSOR_DIR/get-shit-done" ] && [ "$FORCE" = false ]; then
         read -r -p "  Overwrite? (y/N) " response
         if [[ ! "$response" =~ ^[Yy]$ ]]; then
             echo -e "  ${CYAN}Skipping GSD file copy.${NC}"
+            DO_GSD=false
         fi
     fi
 fi
+fi
+
+if [[ "$DO_GSD" = true ]]; then
 
 directories=(
     "commands/gsd"
@@ -78,47 +87,15 @@ if [ -f "$REINDEX_SRC" ]; then
     ok "Copied cursor-powerup-reindex.sh"
 fi
 
-# Bundled repo skills (gsd-for-cursor, animation-designer, immersive-3d-web, ...)
-source "$SCRIPT_DIR/lib/bundled-skills.sh"
-install_bundled_skills "$CURSOR_SKILLS"
-ok "Bundled skills from src/skills/"
-
-# Cursor settings.json (hooks + statusline)
-settings_path="$CURSOR_DIR/settings.json"
-if command -v jq &>/dev/null && [ -f "$settings_path" ]; then
-    jq '. + {
-        "hooks": {
-            "SessionStart": [{"hooks": [
-                {"type":"command","command":"node ~/.cursor/hooks/gsd-check-update.js"},
-                {"type":"command","command":"node ~/.cursor/hooks/gsd-powerup-reminder.js"}
-            ]}]
-        },
-        "statusLine": {"type":"command","command":"node ~/.cursor/hooks/gsd-statusline.js"}
-    }' "$settings_path" > "$settings_path.tmp" && mv "$settings_path.tmp" "$settings_path"
-    ok "Merged hooks into settings.json"
-else
-    cat > "$settings_path" << 'SETTINGS'
-{
-    "hooks": {
-        "SessionStart": [
-            {
-                "hooks": [
-                    {"type": "command", "command": "node ~/.cursor/hooks/gsd-check-update.js"},
-                    {"type": "command", "command": "node ~/.cursor/hooks/gsd-powerup-reminder.js"}
-                ]
-            }
-        ]
-    },
-    "statusLine": {
-        "type": "command",
-        "command": "node ~/.cursor/hooks/gsd-statusline.js"
-    }
-}
-SETTINGS
-    ok "Created settings.json"
-fi
+# Cursor settings.json (hooks + statusline) — merge, never replace user keys
+node "$SCRIPT_DIR/lib/cursor-settings.mjs" "$CURSOR_DIR/settings.json" \
+    && ok "settings.json: GSD hooks + statusline ensured" \
+    || warn "settings.json merge skipped — file left untouched"
 
 echo "2.0.0" > "$CURSOR_DIR/get-shit-done/VERSION"
+fi
+
+[[ "$GSD_ONLY" = true ]] && return 0
 
 # ── Phase C2 — agentmemory connect cursor ────────────────────────────────────
 phase "C2" "agentmemory → Cursor MCP"
@@ -131,78 +108,8 @@ else
     info "  (PATH will include ~/.npm-global/bin after restarting your shell)"
 fi
 
-# ── Phase C3 — Ensure playwright + github in mcp.json ────────────────────────
-phase "C3" "Ensure playwright + github in Cursor mcp.json"
-
-merge_mcp_cursor() {
-python3 - <<'PY'
-import json, os
-p = os.path.expanduser("~/.cursor/mcp.json")
-try:
-    with open(p) as f:
-        d = json.load(f)
-except Exception:
-    d = {}
-s = d.setdefault("mcpServers", {})
-changed = False
-if "playwright" not in s:
-    s["playwright"] = {"command": "npx", "args": ["-y", "@playwright/mcp@latest"]}
-    changed = True
-if "github" not in s:
-    s["github"] = {
-        "url": "https://api.githubcopilot.com/mcp/",
-        "headers": {"Authorization": "Bearer ${env:GITHUB_PERSONAL_ACCESS_TOKEN}"}
-    }
-    changed = True
-if changed:
-    with open(p, "w") as f:
-        json.dump(d, f, indent=2)
-        f.write("\n")
-    print("MCP: ensured playwright + github entries")
-else:
-    print("MCP: playwright + github already present")
-PY
-}
-
-if command -v python3 &>/dev/null; then
-    merge_mcp_cursor && ok "Cursor mcp.json updated" || warn "mcp.json merge failed"
-elif command -v node &>/dev/null; then
-    node - "$CURSOR_MCP" <<'JS'
-const fs=require('fs'), p=process.argv[1];
-let d={}; try{d=JSON.parse(fs.readFileSync(p,'utf8'))}catch(e){}
-const s=d.mcpServers||(d.mcpServers={});
-if(!s.playwright) s.playwright={command:'npx',args:['-y','@playwright/mcp@latest']};
-if(!s.github) s.github={url:'https://api.githubcopilot.com/mcp/',headers:{Authorization:'Bearer ${env:GITHUB_PERSONAL_ACCESS_TOKEN}'}};
-fs.writeFileSync(p,JSON.stringify(d,null,2)+'\n');
-console.log('MCP: ensured playwright + github');
-JS
-    ok "Cursor mcp.json updated (node fallback)"
-else
-    mkdir -p "$CURSOR_DIR"
-    cat > "$CURSOR_MCP" << 'EOF'
-{
-  "mcpServers": {
-    "agentmemory": {
-      "command": "npx",
-      "args": ["-y", "@agentmemory/mcp"],
-      "env": { "AGENTMEMORY_URL": "${AGENTMEMORY_URL:-http://localhost:3111}" }
-    },
-    "playwright": {
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest"]
-    },
-    "github": {
-      "url": "https://api.githubcopilot.com/mcp/",
-      "headers": { "Authorization": "Bearer ${env:GITHUB_PERSONAL_ACCESS_TOKEN}" }
-    }
-  }
-}
-EOF
-    ok "Created Cursor mcp.json with agentmemory, playwright, github"
-fi
-
-# ── Phase C4 — antigravity skills (development,backend) ──────────────────────
-phase "C4" "antigravity skills → ~/.cursor/skills (development,backend)"
+# ── Phase C3 — antigravity skills (development,backend) ──────────────────────
+phase "C3" "antigravity skills → ~/.cursor/skills (development,backend)"
 
 mkdir -p "$CURSOR_SKILLS"
 echo -n "  Installing antigravity skills (development,backend, risk=safe) ... "
@@ -212,17 +119,6 @@ npx --yes antigravity-awesome-skills \
     --risk safe 2>/dev/null \
     && echo -e "${GREEN}ok${NC}" \
     || echo -e "${YELLOW}WARN — antigravity install failed (non-fatal)${NC}"
-
-# ui-ux-pro-max skill
-if [ ! -d "$CURSOR_SKILLS/ui-ux-pro-max" ]; then
-    echo -n "  Installing ui-ux-pro-max skill ... "
-    git clone --depth 1 "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill" \
-        "$CURSOR_SKILLS/ui-ux-pro-max" 2>/dev/null \
-        && echo -e "${GREEN}ok${NC}" \
-        || echo -e "${YELLOW}WARN — clone failed (non-fatal)${NC}"
-else
-    info "ui-ux-pro-max already installed"
-fi
 
 # Count installed skills
 SKILL_COUNT=$(find "$CURSOR_SKILLS" -name "SKILL.md" 2>/dev/null | wc -l | tr -d ' ')

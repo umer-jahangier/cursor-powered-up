@@ -2,7 +2,8 @@
 # =============================================================================
 # generic.sh — Shared install phases (all IDEs)
 # =============================================================================
-# Phases: prereqs, npm prefix, npm globals, reference repo clones, gitnexus
+# Phases: prereqs, npm prefix, npm globals, reference repo clones, gitnexus.
+# Skills / MCP / rules for every agent are handled afterwards by powerup.mjs.
 # Called by install.sh after IDE selection.
 # =============================================================================
 
@@ -51,7 +52,7 @@ fi
 check_cmd npm   npm     node
 check_cmd npx   npm     node
 check_cmd git   git     git
-check_cmd python3 python3 python3 || check_cmd python python3 python3 2>/dev/null || warn "python3 not found — MCP JSON merge will use fallback"
+check_cmd python3 python3 python3 || check_cmd python python3 python3 2>/dev/null || warn "python3 not found — only needed at runtime by the ui-ux-pro-max search script"
 
 if [[ $MISSING_PREREQS -eq 1 ]] && [[ "$FORCE" = false ]]; then
     echo ""

@@ -1,10 +1,24 @@
 <#
 .SYNOPSIS
-    cursor-powered-up — Unified Installer (Windows)
+    cursor-powered-up — Multi-Agent Installer (Windows)
 
 .DESCRIPTION
-    One script that does everything: GSD for Cursor + global power-up stack.
-    Mirrors scripts/install.sh for Windows PowerShell.
+    One install for every AI coding agent (Claude Code, Cursor, Codex CLI, Gemini CLI,
+    Antigravity, GitHub Copilot, Windsurf/Devin, OpenCode, Kiro, Cline).
+    Skills, MCP servers and rules are applied per agent by scripts/lib/powerup.mjs,
+    the same engine scripts/install.sh uses. GSD workflows are installed for Cursor.
+
+.PARAMETER Agents
+    detected (default) | all | comma list, e.g. "claude-code,cursor,codex".
+
+.PARAMETER Packs
+    Skill packs: default | all | none | ui-design,motion,3d,dataflow,workflow.
+
+.PARAMETER Mcp
+    MCP servers: core (default) | extra | all | none | server names.
+
+.PARAMETER DryRun
+    Print what would be installed; change nothing.
 
 .PARAMETER Force
     Overwrite existing installation without prompting.
@@ -17,11 +31,16 @@
 
 .EXAMPLE
     .\scripts\install.ps1
-    .\scripts\install.ps1 -Force
+    .\scripts\install.ps1 -Agents "claude-code,cursor,codex" -Packs "default,workflow"
+    .\scripts\install.ps1 -DryRun
     .\scripts\install.ps1 -GsdOnly
 #>
 
 param(
+    [string]$Agents = "detected",
+    [string]$Packs = "default",
+    [string]$Mcp = "core",
+    [switch]$DryRun,
     [switch]$Force,
     [switch]$GsdOnly,
     [switch]$PowerupOnly
@@ -35,6 +54,8 @@ $SourcePath = (Resolve-Path (Join-Path $ScriptDir "..\src")).Path
 $HomeDir    = if ($env:USERPROFILE) { $env:USERPROFILE } elseif ($env:HOME) { $env:HOME } else { throw "Cannot determine home directory" }
 $CursorDir  = Join-Path $HomeDir ".cursor"
 $NpmPrefix  = Join-Path $HomeDir ".npm-global"
+$Powerup    = Join-Path $ScriptDir "lib\powerup.mjs"
+$AgentsLib  = Join-Path $ScriptDir "lib\agents.mjs"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 function Phase($n, $title) { Write-Host "`n▶ Phase ${n}: $title" -ForegroundColor Cyan }
@@ -45,7 +66,7 @@ function Info($msg) { Write-Host "    $msg" -ForegroundColor Gray }
 # ── Header ────────────────────────────────────────────────────────────────────
 Write-Host ""
 Write-Host "╔══════════════════════════════════════════╗" -ForegroundColor Green
-Write-Host "║   cursor-powered-up  —  Full Installer   ║" -ForegroundColor Green
+Write-Host "║   cursor-powered-up — Multi-Agent Setup  ║" -ForegroundColor Green
 Write-Host "╚══════════════════════════════════════════╝" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Source:  $SourcePath" -ForegroundColor Gray
@@ -93,6 +114,23 @@ if ($missingPrereqs -and -not $Force) {
     Write-Host "  One or more prerequisites are missing." -ForegroundColor Red
     Write-Host "  Install them then re-run, or use -Force to skip this check." -ForegroundColor Yellow
     exit 1
+}
+
+# ── Agent selection ───────────────────────────────────────────────────────────
+$Selected = (node $AgentsLib $Agents)
+if ($LASTEXITCODE -ne 0) { exit 1 }
+$HasCursor = ($Selected -split ' ') -contains 'cursor'
+Write-Host ""
+Write-Host "  Agents: $Selected" -ForegroundColor Cyan
+Write-Host "  Packs:  $Packs    MCP: $Mcp" -ForegroundColor Cyan
+
+$PowerupArgs = @('--agents', $Agents, '--packs', $Packs, '--mcp', $Mcp)
+if ($DryRun) { $PowerupArgs += '--dry-run' }
+if ($Force)  { $PowerupArgs += '--force' }
+
+if ($DryRun) {
+    node $Powerup all @PowerupArgs
+    exit 0
 }
 
 # =============================================================================
@@ -146,9 +184,9 @@ if (-not $GsdOnly) {
 }
 
 # =============================================================================
-# PHASE 4 — Copy GSD files to ~/.cursor
+# PHASE 4 — Copy GSD files to ~/.cursor (Cursor only)
 # =============================================================================
-if (-not $PowerupOnly) {
+if ($HasCursor -and -not $PowerupOnly) {
     Phase 4 "Copy GSD files to ~/.cursor"
 
     if (-not (Test-Path $SourcePath)) {
@@ -210,40 +248,10 @@ if (-not $PowerupOnly) {
         Ok "Copied cursor-powerup-reindex.sh"
     }
 
-    # GSD skill
-    $skillSrc = Join-Path $SourcePath "skills\gsd-for-cursor\SKILL.md"
-    if (Test-Path $skillSrc) {
-        $skillDst = Join-Path $CursorDir "skills\gsd-for-cursor\SKILL.md"
-        New-Item -ItemType Directory -Path (Split-Path $skillDst) -Force | Out-Null
-        Copy-Item $skillSrc $skillDst -Force
-        Ok "Copied gsd-for-cursor skill"
-    }
-
-    # settings.json
-    $settingsPath = Join-Path $CursorDir "settings.json"
-    $settingsObj = @{
-        hooks = @{
-            SessionStart = @(@{
-                hooks = @(
-                    @{ type = "command"; command = "node ~/.cursor/hooks/gsd-check-update.js" },
-                    @{ type = "command"; command = "node ~/.cursor/hooks/gsd-powerup-reminder.js" }
-                )
-            })
-        }
-        statusLine = @{ type = "command"; command = "node ~/.cursor/hooks/gsd-statusline.js" }
-    }
-    if (Test-Path $settingsPath) {
-        try {
-            $existing = Get-Content $settingsPath -Raw | ConvertFrom-Json -AsHashtable -ErrorAction Stop
-            $existing["hooks"]      = $settingsObj["hooks"]
-            $existing["statusLine"] = $settingsObj["statusLine"]
-            $settingsObj = $existing
-        } catch {
-            Warn "Could not parse existing settings.json — overwriting"
-        }
-    }
-    $settingsObj | ConvertTo-Json -Depth 10 | Set-Content $settingsPath -Encoding UTF8
-    Ok "settings.json updated"
+    # settings.json — merge hooks/statusline, never replace user keys (shared with install.sh)
+    node (Join-Path $ScriptDir "lib\cursor-settings.mjs") (Join-Path $CursorDir "settings.json")
+    if ($LASTEXITCODE -eq 0) { Ok "settings.json: GSD hooks + statusline ensured" }
+    else { Warn "settings.json merge skipped — file left untouched" }
 
     "2.0.0" | Set-Content (Join-Path $CursorDir "get-shit-done\VERSION") -Encoding UTF8
 }
@@ -251,7 +259,7 @@ if (-not $PowerupOnly) {
 # =============================================================================
 # PHASE 5 — agentmemory connect cursor
 # =============================================================================
-if (-not $GsdOnly) {
+if ($HasCursor -and -not $GsdOnly) {
     Phase 5 "agentmemory → Cursor MCP"
     $agentmemory = Get-Command agentmemory -ErrorAction SilentlyContinue
     if ($agentmemory) {
@@ -263,46 +271,9 @@ if (-not $GsdOnly) {
 }
 
 # =============================================================================
-# PHASE 6 — Ensure playwright + github in mcp.json
+# PHASE 7 — antigravity safe skills (Cursor)
 # =============================================================================
-if (-not $GsdOnly) {
-    Phase 6 "Ensure playwright + github in mcp.json"
-    $mcpPath = Join-Path $CursorDir "mcp.json"
-
-    if (Test-Path $mcpPath) {
-        try {
-            $mcp = Get-Content $mcpPath -Raw | ConvertFrom-Json -AsHashtable
-        } catch { $mcp = @{} }
-    } else { $mcp = @{} }
-
-    if (-not $mcp.ContainsKey("mcpServers")) { $mcp["mcpServers"] = @{} }
-    $s = $mcp["mcpServers"]
-
-    if (-not $s.ContainsKey("playwright")) {
-        $s["playwright"] = @{ command = "npx"; args = @("-y", "@playwright/mcp@latest") }
-    }
-    if (-not $s.ContainsKey("github")) {
-        $s["github"] = @{
-            url     = "https://api.githubcopilot.com/mcp/"
-            headers = @{ Authorization = 'Bearer ${env:GITHUB_PERSONAL_ACCESS_TOKEN}' }
-        }
-    }
-    if (-not $s.ContainsKey("agentmemory")) {
-        $s["agentmemory"] = @{
-            command = "npx"
-            args    = @("-y", "@agentmemory/mcp")
-            env     = @{ AGENTMEMORY_URL = '${AGENTMEMORY_URL:-http://localhost:3111}' }
-        }
-    }
-
-    $mcp | ConvertTo-Json -Depth 10 | Set-Content $mcpPath -Encoding UTF8
-    Ok "mcp.json updated (playwright + github + agentmemory)"
-}
-
-# =============================================================================
-# PHASE 7 — antigravity safe skills
-# =============================================================================
-if (-not $GsdOnly) {
+if ($HasCursor -and -not $GsdOnly) {
     Phase 7 "antigravity safe skills bundle"
     New-Item -ItemType Directory -Path (Join-Path $CursorDir "skills") -Force | Out-Null
     try {
@@ -317,26 +288,12 @@ if (-not $GsdOnly) {
 }
 
 # =============================================================================
-# PHASE 7b — UI-UX Pro Max skill
+# PHASE 7b — Cross-agent power-up: skill packs, bundled skills, MCP, rules
 # =============================================================================
 if (-not $GsdOnly) {
-    Phase "7b" "UI-UX Pro Max skill"
-    $uupmDir = Join-Path $CursorDir "skills\ui-ux-pro-max"
-    if ((Test-Path (Join-Path $uupmDir "SKILL.md")) -and -not $Force) {
-        Info "ui-ux-pro-max already installed at $uupmDir"
-    } else {
-        $tmp = Join-Path $env:TEMP "ui-ux-pro-max-skill"
-        Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
-        try {
-            git clone --depth 1 https://github.com/nextlevelbuilder/ui-ux-pro-max-skill $tmp 2>$null
-            New-Item -ItemType Directory -Path $uupmDir -Force | Out-Null
-            Copy-Item -Recurse -Force (Join-Path $tmp ".cursor\skills\ui-ux-pro-max\*") $uupmDir
-            Ok "ui-ux-pro-max installed via git clone"
-        } catch {
-            Warn "ui-ux-pro-max install failed (non-fatal)"
-        }
-        Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
-    }
+    Phase "7b" "Skills + MCP + rules for: $Selected"
+    node $Powerup all @PowerupArgs
+    if ($LASTEXITCODE -ne 0) { Warn "Some items failed (see table above) — re-run with -Force to retry" }
 }
 
 # =============================================================================
@@ -390,19 +347,14 @@ $installedMd = @"
 
 | Field   | Value |
 |---------|-------|
-| Version | 2.0.0 |
+| Version | 4.0.0 |
 | Date    | $installedAt |
 | Source  | $ScriptDir |
-| Target  | $CursorDir |
+| Agents  | $Selected |
+| Packs   | $Packs |
+| MCP     | $Mcp |
 
-## What was installed
-
-- GSD for Cursor (commands, agents, workflows, templates, references, hooks)
-- Global npm tools: @agentmemory/agentmemory, @colbymchenry/codegraph, agnix
-- MCP wired: agentmemory, playwright, github
-- antigravity safe skills bundle
-- Reference repos cloned to ~/.cursor/repos/
-- Hooks: gsd-check-update, gsd-powerup-reminder, gsd-statusline
+Check state any time: ``node $Powerup status``
 
 ## Update
 
@@ -413,8 +365,11 @@ git pull
 ``````
 "@
 
-Set-Content (Join-Path $CursorDir "POWERUP-INSTALLED.md") $installedMd -Encoding UTF8
-Ok "Wrote ~/.cursor/POWERUP-INSTALLED.md"
+$agentsHome = Join-Path $HomeDir ".agents"
+New-Item -ItemType Directory -Path $agentsHome -Force | Out-Null
+Set-Content (Join-Path $agentsHome "POWERUP-INSTALLED.md") $installedMd -Encoding UTF8
+if ($HasCursor) { Set-Content (Join-Path $CursorDir "POWERUP-INSTALLED.md") $installedMd -Encoding UTF8 }
+Ok "Wrote ~/.agents/POWERUP-INSTALLED.md"
 
 # =============================================================================
 # PHASE 11 — Full power banner
@@ -427,11 +382,11 @@ Write-Host "║   cursor-powered-up  installed!          ║" -ForegroundColor G
 Write-Host "╚══════════════════════════════════════════╝" -ForegroundColor Green
 Write-Host ""
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Yellow
-Write-Host " FULL POWER — complete these steps (required for 21st.dev + UI):" -ForegroundColor Yellow
-Write-Host " See: docs/POST-INSTALL.md in this repo" -ForegroundColor Yellow
-Write-Host "   • 21st.dev MCP (your API key)" -ForegroundColor Yellow
-Write-Host "   • framer-motion in React projects" -ForegroundColor Yellow
-Write-Host "   • GITHUB_PERSONAL_ACCESS_TOKEN" -ForegroundColor Yellow
+Write-Host " NEXT STEPS (docs/POST-INSTALL.md):" -ForegroundColor Yellow
+Write-Host "   • Restart your agents / IDEs" -ForegroundColor Yellow
+Write-Host "   • GITHUB_PERSONAL_ACCESS_TOKEN in your PowerShell profile" -ForegroundColor Yellow
 Write-Host "   • agentmemory each session" -ForegroundColor Yellow
+Write-Host "   • Per repo: node $Powerup project-init --dir .   (AGENTS.md for every agent)" -ForegroundColor Yellow
+Write-Host "   • Optional: 21st.dev Magic MCP (needs your API key)" -ForegroundColor Yellow
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Yellow
 Write-Host ""

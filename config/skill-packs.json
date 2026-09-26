@@ -1,0 +1,330 @@
+{
+  "$comment": "Skill packs installed by scripts/lib/powerup.mjs for every selected agent. Per item, per agent, the FIRST matching route wins: (1) claudePlugin when the agent is claude-code, (2) native installer when it maps that agent (the method the upstream README recommends), (3) `npx skills add` as the universal fallback (also used when a native installer fails). `cli` = a companion CLI installed once if its bin is missing. Never use upstream `setup` commands that write into the current directory. Skills already present in an agent's skills dir are skipped unless --force. Verified 2026-09-27.",
+  "packs": {
+    "ui-design": {
+      "default": true,
+      "description": "Design taste + UI/UX quality (Impeccable is primary; see src/rules/10-design-precedence.md)",
+      "items": [
+        {
+          "id": "frontend-design",
+          "description": "Anthropic official frontend-design (fallback baseline)",
+          "url": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/frontend-design",
+          "claudePlugin": {
+            "marketplace": "anthropics/claude-plugins-official",
+            "plugin": "frontend-design@claude-plugins-official"
+          },
+          "skills": {
+            "source": "anthropics/skills",
+            "names": [
+              "frontend-design"
+            ]
+          }
+        },
+        {
+          "id": "impeccable",
+          "description": "Impeccable by Paul Bakaus — primary design authority (/impeccable audit|polish|...)",
+          "url": "https://github.com/pbakaus/impeccable",
+          "claudePlugin": {
+            "marketplace": "pbakaus/impeccable",
+            "plugin": "impeccable@impeccable"
+          },
+          "native": {
+            "mode": "batch",
+            "cmd": [
+              "npx",
+              "-y",
+              "impeccable",
+              "install",
+              "--global",
+              "-y",
+              "--providers={providers}"
+            ],
+            "providers": {
+              "cursor": "cursor",
+              "codex": "codex",
+              "gemini-cli": "gemini",
+              "github-copilot": "github",
+              "opencode": "opencode"
+            }
+          },
+          "skills": {
+            "source": "pbakaus/impeccable",
+            "names": [
+              "impeccable"
+            ]
+          }
+        },
+        {
+          "id": "taste-skill",
+          "description": "Taste Skill (Leonxlnx) — variance / motion / density dials",
+          "url": "https://github.com/Leonxlnx/taste-skill",
+          "skills": {
+            "source": "Leonxlnx/taste-skill",
+            "names": [
+              "design-taste-frontend"
+            ]
+          }
+        },
+        {
+          "id": "ui-ux-pro-max",
+          "description": "UI UX Pro Max — styles, palettes, font pairings, design-system generator",
+          "url": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+          "claudePlugin": {
+            "marketplace": "nextlevelbuilder/ui-ux-pro-max-skill",
+            "plugin": "ui-ux-pro-max@ui-ux-pro-max-skill"
+          },
+          "native": {
+            "mode": "per-agent",
+            "cmd": [
+              "npx",
+              "-y",
+              "-p",
+              "ui-ux-pro-max-cli",
+              "uipro",
+              "init",
+              "--global",
+              "--ai",
+              "{provider}"
+            ],
+            "providers": {
+              "cursor": "cursor",
+              "codex": "codex",
+              "gemini-cli": "gemini",
+              "github-copilot": "copilot"
+            },
+            "$comment": "uipro --global writes Windsurf/OpenCode/Antigravity/Kiro skills to folders those agents don't read, so they use npx skills instead (verified 2026-09-27)."
+          },
+          "skills": {
+            "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+            "names": [
+              "ui-ux-pro-max"
+            ]
+          }
+        },
+        {
+          "id": "ibelick-ui-skills",
+          "description": "ibelick ui-skills — fast deslop, motion perf and a11y fixers",
+          "url": "https://github.com/ibelick/ui-skills",
+          "skills": {
+            "source": "ibelick/ui-skills",
+            "names": [
+              "baseline-ui",
+              "fixing-motion-performance",
+              "fixing-accessibility"
+            ]
+          }
+        },
+        {
+          "id": "vercel-agent-skills",
+          "description": "Vercel — Web Interface Guidelines review, React best practices, composition patterns",
+          "url": "https://github.com/vercel-labs/agent-skills",
+          "skills": {
+            "source": "vercel-labs/agent-skills",
+            "names": [
+              "web-design-guidelines",
+              "vercel-react-best-practices",
+              "vercel-composition-patterns",
+              "vercel-react-view-transitions"
+            ]
+          }
+        }
+      ]
+    },
+    "motion": {
+      "default": true,
+      "description": "Animation craft: Emil Kowalski + official GSAP skills",
+      "items": [
+        {
+          "id": "emil-kowalski-skills",
+          "description": "Emil Kowalski — animation decisions, design engineering, Apple-style motion",
+          "url": "https://github.com/emilkowalski/skills",
+          "skills": {
+            "source": "emilkowalski/skills",
+            "names": [
+              "emil-design-eng",
+              "animate",
+              "animate-expo",
+              "review-animations",
+              "improve-animations",
+              "find-animation-opportunities",
+              "animation-vocabulary",
+              "apple-design",
+              "write-swift",
+              "pick-ui-library",
+              "prototype",
+              "mobile-native",
+              "ask-sonner"
+            ]
+          }
+        },
+        {
+          "id": "gsap-skills",
+          "description": "GreenSock official — core, timeline, ScrollTrigger, plugins, utils, React, frameworks, performance",
+          "url": "https://github.com/greensock/gsap-skills",
+          "skills": {
+            "source": "greensock/gsap-skills",
+            "names": [
+              "gsap-core",
+              "gsap-timeline",
+              "gsap-scrolltrigger",
+              "gsap-plugins",
+              "gsap-utils",
+              "gsap-react",
+              "gsap-frameworks",
+              "gsap-performance"
+            ]
+          }
+        }
+      ]
+    },
+    "3d": {
+      "default": true,
+      "description": "Three.js / React Three Fiber (24 skills)",
+      "items": [
+        {
+          "id": "threejs-skills",
+          "description": "Three.js skill package (moved from OpenAEC-Foundation to Impertio-Studio)",
+          "url": "https://github.com/Impertio-Studio/Three.js-Claude-Skill-Package",
+          "skills": {
+            "source": "https://github.com/Impertio-Studio/Three.js-Claude-Skill-Package",
+            "names": [
+              "threejs-core-math",
+              "threejs-core-raycaster",
+              "threejs-core-renderer",
+              "threejs-core-scene-graph",
+              "threejs-syntax-controls",
+              "threejs-syntax-geometries",
+              "threejs-syntax-loaders",
+              "threejs-syntax-materials",
+              "threejs-syntax-shaders",
+              "threejs-impl-animation",
+              "threejs-impl-audio",
+              "threejs-impl-drei",
+              "threejs-impl-ifc-viewer",
+              "threejs-impl-lighting",
+              "threejs-impl-physics",
+              "threejs-impl-post-processing",
+              "threejs-impl-react-three-fiber",
+              "threejs-impl-shadows",
+              "threejs-impl-webgpu",
+              "threejs-impl-xr",
+              "threejs-errors-performance",
+              "threejs-errors-rendering",
+              "threejs-agents-model-optimizer",
+              "threejs-agents-scene-builder"
+            ]
+          }
+        }
+      ]
+    },
+    "dataflow": {
+      "default": true,
+      "description": "See how data and API calls flow through an app: interactive graphs + Mermaid/C4 diagrams",
+      "items": [
+        {
+          "id": "understand-anything",
+          "description": "Understand-Anything — multi-agent codebase knowledge graph, interactive dashboard (API/Service/Data/UI layers), domain flows, diff impact",
+          "url": "https://github.com/Egonex-AI/Understand-Anything",
+          "claudePlugin": {
+            "marketplace": "Egonex-AI/Understand-Anything",
+            "plugin": "understand-anything@understand-anything"
+          },
+          "skills": {
+            "source": "Egonex-AI/Understand-Anything",
+            "names": [
+              "understand",
+              "understand-chat",
+              "understand-dashboard",
+              "understand-diff",
+              "understand-domain",
+              "understand-explain",
+              "understand-onboard"
+            ]
+          }
+        },
+        {
+          "id": "oh-my-mermaid",
+          "description": "oh-my-mermaid — /omm-scan writes architecture + data-flow Mermaid perspectives to .omm/, `omm view` opens a viewer",
+          "url": "https://github.com/oh-my-mermaid/oh-my-mermaid",
+          "cli": {
+            "bin": "omm",
+            "install": [
+              "npm",
+              "install",
+              "-g",
+              "oh-my-mermaid"
+            ]
+          },
+          "claudePlugin": {
+            "marketplace": "oh-my-mermaid/oh-my-mermaid",
+            "plugin": "oh-my-mermaid@oh-my-mermaid"
+          },
+          "skills": {
+            "source": "oh-my-mermaid/oh-my-mermaid",
+            "names": [
+              "omm-scan",
+              "omm-view",
+              "omm-push"
+            ]
+          }
+        },
+        {
+          "id": "diagram-skills",
+          "description": "Mermaid (sequence / flowchart / ER / data-flow) and C4 architecture diagram skills",
+          "url": "https://github.com/softaworks/agent-toolkit",
+          "skills": {
+            "source": "softaworks/agent-toolkit",
+            "names": [
+              "mermaid-diagrams",
+              "c4-architecture"
+            ]
+          }
+        }
+      ]
+    },
+    "workflow": {
+      "default": false,
+      "description": "Opt-in engineering discipline: Superpowers (brainstorm → plan → TDD → review) + Anthropic webapp-testing / mcp-builder",
+      "items": [
+        {
+          "id": "superpowers",
+          "description": "obra/superpowers — brainstorming, planning, TDD, systematic debugging, verification. Opinionated: it asks the agent to check skills before every reply",
+          "url": "https://github.com/obra/superpowers",
+          "claudePlugin": {
+            "marketplace": "anthropics/claude-plugins-official",
+            "plugin": "superpowers@claude-plugins-official"
+          },
+          "skills": {
+            "source": "obra/superpowers",
+            "names": [
+              "brainstorming",
+              "writing-plans",
+              "executing-plans",
+              "test-driven-development",
+              "systematic-debugging",
+              "requesting-code-review",
+              "receiving-code-review",
+              "verification-before-completion",
+              "using-git-worktrees",
+              "using-superpowers",
+              "writing-skills"
+            ]
+          }
+        },
+        {
+          "id": "anthropic-dev-skills",
+          "description": "Anthropic — webapp-testing (Playwright), mcp-builder, skill-creator",
+          "url": "https://github.com/anthropics/skills",
+          "skills": {
+            "source": "anthropics/skills",
+            "names": [
+              "webapp-testing",
+              "mcp-builder",
+              "skill-creator"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

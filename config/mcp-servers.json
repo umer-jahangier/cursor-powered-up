@@ -1,0 +1,66 @@
+{
+  "$comment": "Single source of truth for MCP servers. scripts/lib/mcp-sync.mjs translates each entry into every agent's own config format. tier=core installs by default; tier=extra installs with --mcp extra (or --mcp all). Entries are only ever ADDED — an existing server with the same name is never overwritten.",
+  "servers": {
+    "playwright": {
+      "tier": "core",
+      "description": "Browser automation and E2E checks",
+      "stdio": { "command": "npx", "args": ["-y", "@playwright/mcp@latest"] }
+    },
+    "github": {
+      "tier": "core",
+      "description": "GitHub repos, issues, PRs (needs GITHUB_PERSONAL_ACCESS_TOKEN)",
+      "http": { "url": "https://api.githubcopilot.com/mcp/", "bearerEnv": "GITHUB_PERSONAL_ACCESS_TOKEN" }
+    },
+    "agentmemory": {
+      "tier": "core",
+      "description": "Persistent agent memory (run `agentmemory` each session)",
+      "stdio": { "command": "npx", "args": ["-y", "@agentmemory/mcp"], "env": { "AGENTMEMORY_URL": "http://localhost:3111" } }
+    },
+    "context7": {
+      "tier": "core",
+      "description": "Up-to-date, version-specific library docs",
+      "http": { "url": "https://mcp.context7.com/mcp" }
+    },
+    "shadcn": {
+      "tier": "core",
+      "description": "Browse, search and install shadcn/ui registry components",
+      "stdio": { "command": "npx", "args": ["-y", "shadcn@latest", "mcp"] }
+    },
+    "chrome-devtools": {
+      "tier": "core",
+      "description": "Performance traces, console, network and DOM debugging",
+      "stdio": { "command": "npx", "args": ["-y", "chrome-devtools-mcp@latest"] }
+    },
+    "next-devtools": {
+      "tier": "extra",
+      "description": "Live errors, routes and logs from a running Next.js 16+ dev server",
+      "stdio": { "command": "npx", "args": ["-y", "next-devtools-mcp@latest"] }
+    },
+    "deepwiki": {
+      "tier": "extra",
+      "description": "Ask questions about any public GitHub repo's architecture",
+      "http": { "url": "https://mcp.deepwiki.com/mcp" }
+    },
+    "excalidraw": {
+      "tier": "extra",
+      "description": "Hand-drawn architecture / flow diagrams (needs an MCP-Apps capable client)",
+      "http": { "url": "https://mcp.excalidraw.com" }
+    },
+    "figma": {
+      "tier": "extra",
+      "description": "Design-to-code context from Figma (OAuth on first use)",
+      "http": { "url": "https://mcp.figma.com/mcp" }
+    },
+    "sentry": {
+      "tier": "extra",
+      "description": "Pull production errors and traces into the agent (OAuth on first use)",
+      "http": { "url": "https://mcp.sentry.dev/mcp" }
+    },
+    "appmap": {
+      "tier": "extra",
+      "description": "Runtime API -> function -> SQL flow queries (needs AppMap CLI + recorded app)",
+      "requiresCommand": "appmap",
+      "stdio": { "command": "appmap", "args": ["query", "mcp"] }
+    }
+  }
+}

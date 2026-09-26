@@ -1,100 +1,81 @@
-# IDE Paths Reference
+# Agent Paths Reference
 
-> Research document for multi-IDE installer. Covers skills directories, MCP config paths, and tool-specific commands for each supported IDE.
+Where each AI coding agent keeps its skills, MCP servers and rules, and the dialect each one expects.
+The installer encodes all of this in [`scripts/lib/agents.mjs`](../scripts/lib/agents.mjs). To fix or add a path, change that one file.
 
----
-
-## Summary Table
-
-| Tool / Feature | Cursor | VS Code (Copilot) | Antigravity |
-|----------------|--------|-------------------|-------------|
-| **Skills dir** | `~/.cursor/skills/` | `~/.vscode/skills/` (user-created) | `~/.agents/skills/` |
-| **MCP config** | `~/.cursor/mcp.json` | User profile `mcp.json` ¹ | `~/Library/Application Support/Antigravity/User/mcp_config.json` (macOS) or `~/.config/Antigravity/User/mcp_config.json` (Linux) |
-| **MCP key format** | `"mcpServers": {}` | `"servers": {}` | `"mcpServers": {}` |
-| **agentmemory connect** | `agentmemory connect cursor` | Manual MCP block ² | `agentmemory connect antigravity` |
-| **GSD commands** | `~/.cursor/commands/gsd/` | N/A (Cursor-exclusive) | N/A (Cursor-exclusive) |
-| **21st.dev CLI** | `npx @21st-dev/cli install cursor --api-key KEY` | `npx @21st-dev/cli install vscode --api-key KEY` ³ | N/A |
-| **CodeGraph** | `codegraph init -i` (auto-detects) | `codegraph init -i` (auto-detects) | `codegraph init -i` (auto-detects) |
-| **antigravity-awesome-skills** | `npx antigravity-awesome-skills --path ~/.cursor/skills --category development,backend --risk safe` | `npx antigravity-awesome-skills --path ~/.vscode/skills --category development,backend --risk safe` | `npx antigravity-awesome-skills --path ~/.agents/skills --category development,backend --risk safe` |
-
-¹ VS Code user-level MCP path varies by OS:
-- macOS: `~/Library/Application Support/Code/User/mcp.json`
-- Linux: `~/.config/Code/User/mcp.json`
-- Windows: `%APPDATA%\Code\User\mcp.json`
-
-² No `agentmemory connect vscode` command exists. The MCP block must be written manually to the VS Code user mcp.json using the `"servers"` key (not `"mcpServers"`).
-
-³ 21st.dev CLI `install vscode` support is unconfirmed as of 2026-05. Documented as best-effort.
+> Verified 2026-09-27 against official docs. `~` = home directory (`%USERPROFILE%` on Windows).
+> Run `node scripts/lib/powerup.mjs status` to see what is detected on your machine.
 
 ---
 
-## Detailed Notes
+## Summary
 
-### Cursor
+| Agent (`--agents` id) | Global skills dir | User MCP config | MCP top-level key · remote URL key | Global rules file |
+|---|---|---|---|---|
+| Claude Code (`claude-code`) | `~/.claude/skills/` | `~/.claude.json`, written via `claude mcp add-json --scope user` | `mcpServers` · `type:"http"` + `url` | `~/.claude/CLAUDE.md` |
+| Cursor (`cursor`) | `~/.cursor/skills/`, also reads `~/.agents/skills/`, `~/.claude/skills/` | `~/.cursor/mcp.json` | `mcpServers` · `url` | Settings UI only. Use `AGENTS.md` / `.cursor/rules/*.mdc` per project |
+| OpenAI Codex CLI (`codex`) | `~/.codex/skills/` (`npx skills`), `~/.agents/skills/` | `~/.codex/config.toml` | `[mcp_servers.<name>]` · `url` + `bearer_token_env_var` | `~/.codex/AGENTS.md` |
+| Gemini CLI (`gemini-cli`) | `~/.gemini/skills/` | `~/.gemini/settings.json` | `mcpServers` · `httpUrl` (streamable HTTP; `url` means SSE) | `~/.gemini/GEMINI.md` |
+| Antigravity IDE + `agy` CLI (`antigravity`) | `~/.gemini/config/skills/` (IDE also reads legacy `~/.gemini/antigravity/skills/`) ³ | `~/.gemini/config/mcp_config.json` ¹ | `mcpServers` · **`serverUrl`** | `~/.gemini/GEMINI.md` (shared with Gemini CLI) |
+| GitHub Copilot in VS Code (`github-copilot`) | `~/.copilot/skills/`, also `~/.claude/skills/`, `~/.agents/skills/` | User `mcp.json` ² | **`servers`** · `type:"http"` + `url` | `~/.copilot/instructions/*.instructions.md` |
+| Windsurf / Devin Desktop (`windsurf`) | `~/.codeium/windsurf/skills/` | `~/.config/devin/mcp_config.json` (or legacy `~/.codeium/windsurf/mcp_config.json`) | `mcpServers` · **`serverUrl`** | `~/.codeium/windsurf/memories/global_rules.md` (6,000-char limit) |
+| OpenCode (`opencode`) | `~/.config/opencode/skills/` | `~/.config/opencode/opencode.json` | **`mcp`** · `type:"local"` (command array) / `type:"remote"` | `~/.config/opencode/AGENTS.md` |
+| Kiro (`kiro`) | `~/.kiro/skills/` | `~/.kiro/settings/mcp.json` | `mcpServers` · `url` | `~/.kiro/steering/*.md` |
+| Cline (`cline`) | `~/.agents/skills/` | configure in-app (path varies by release) | `mcpServers` | `.clinerules/` per project |
 
-- **Skills**: `~/.cursor/skills/` — Cursor auto-discovers `SKILL.md` files via their description field
-- **MCP**: `~/.cursor/mcp.json` — uses `"mcpServers"` as the top-level key
-- **Hooks**: `~/.cursor/hooks/` — JS files, registered via `~/.cursor/settings.json`
-- **Commands**: `~/.cursor/commands/` — slash commands available in chat
-- **agentmemory**: `agentmemory connect cursor` writes the MCP entry automatically
+¹ In 2026, Antigravity moved from `~/Library/Application Support/Antigravity/User/mcp_config.json` to `~/.gemini/config/mcp_config.json`. `~/.gemini/antigravity/mcp_config.json` is kept as a symlink to it. v3 of this repo still wrote to the old path. v4 fixes that.
 
-### VS Code (with GitHub Copilot)
+² VS Code user `mcp.json`: macOS `~/Library/Application Support/Code/User/mcp.json` · Linux `~/.config/Code/User/mcp.json` · Windows `%APPDATA%\Code\User\mcp.json`. VS Code authenticates the GitHub MCP itself, so no token header is written. If this file contains comments (JSONC), the installer leaves it untouched and tells you.
 
-- **Skills**: No native skills directory. We use `~/.vscode/skills/` as a convention
-  - Copilot discovers context via `.github/copilot-instructions.md` (project-level) or MCP tools
-  - Skills at the user level need to be referenced manually or via MCP context providers
-- **MCP**: `.vscode/mcp.json` (workspace) or user-level `mcp.json` (via Command Palette → "MCP: Open User Configuration")
-  - Uses `"servers"` key (NOT `"mcpServers"`)
-  - Format: `{"servers": {"name": {"command": "...", "args": [...]}}}`
-- **agentmemory**: No dedicated connect command. Write MCP block manually:
-  ```json
-  {
-    "servers": {
-      "agentmemory": {
-        "command": "npx",
-        "args": ["-y", "@agentmemory/mcp"],
-        "env": { "AGENTMEMORY_URL": "http://localhost:3111" }
-      }
-    }
-  }
-  ```
-- **Hooks**: Not applicable (no hook system equivalent to Cursor)
-
-### Antigravity
-
-- **Skills**: `~/.agents/skills/` — default path for `npx antigravity-awesome-skills`
-- **MCP**: `mcp_config.json` in Antigravity's User directory
-  - macOS: `~/Library/Application Support/Antigravity/User/mcp_config.json`
-  - Linux: `~/.config/Antigravity/User/mcp_config.json`
-  - Uses `"mcpServers"` key format
-- **agentmemory**: `agentmemory connect antigravity` — writes the MCP entry automatically
-- **Hooks**: Not documented for Antigravity as of 2026-05
+³ `npx skills` v1.7 installs Antigravity's global skills into the shared `~/.agents/skills`, but Antigravity only reads that folder inside a workspace. The installer symlinks them into `~/.gemini/config/skills` (a junction on Windows).
 
 ---
 
-## Tool Install Commands
+## Token headers (GitHub MCP)
 
-| Tool | Command | Notes |
-|------|---------|-------|
-| agentmemory | `npm install -g @agentmemory/agentmemory` | Global CLI, start with `agentmemory` |
-| CodeGraph | `npm install -g @colbymchenry/codegraph` | Also: `curl -fsSL .../install.sh \| sh` |
-| agnix | `npm install -g agnix` | Utility |
-| gitnexus | `npm install -g gitnexus` | Also: `npx gitnexus analyze` |
-| 21st.dev | `npx @21st-dev/cli install <ide> --api-key KEY` | Requires user API key (post-install) |
+Each agent references environment variables differently. The installer writes the right form for each one:
+
+| Agent | Written as |
+|---|---|
+| Claude Code | `Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}` |
+| Cursor, Antigravity, Windsurf | `Bearer ${env:GITHUB_PERSONAL_ACCESS_TOKEN}` |
+| Gemini CLI | `Bearer $GITHUB_PERSONAL_ACCESS_TOKEN` |
+| OpenCode | `Bearer {env:GITHUB_PERSONAL_ACCESS_TOKEN}` |
+| Codex | `bearer_token_env_var = "GITHUB_PERSONAL_ACCESS_TOKEN"` |
+| VS Code | no header; uses VS Code's GitHub sign-in |
+| Kiro | skipped because the env syntax is unverified. Add it by hand |
 
 ---
 
-## What's IDE-Exclusive
+## Project-level files (per repo)
 
-| Feature | Cursor | VS Code | Antigravity |
-|---------|--------|---------|-------------|
-| GSD slash commands | Yes | No | No |
-| GSD agents | Yes | No | No |
-| GSD hooks (statusline, update check) | Yes | No | No |
-| Skills discovery (native) | Yes | Partial ⁴ | Yes |
-| MCP tools | Yes | Yes | Yes |
-| agentmemory | Yes | Yes | Yes |
-| CodeGraph | Yes | Yes | Yes |
-| antigravity skills | Yes | Yes | Yes |
+`node scripts/lib/powerup.mjs project-init --dir <repo>` sets these up once, so every agent in that repo shares the same rules:
 
-⁴ VS Code discovers MCP tools natively. Skill files require manual reference or Copilot instructions pointing to the skills directory.
+| File | Read by |
+|---|---|
+| `AGENTS.md` | Codex, Cursor, Copilot, Windsurf/Devin, OpenCode, Antigravity, Kiro, Gemini (if `context.fileName` includes it) |
+| `CLAUDE.md` containing `@AGENTS.md` | Claude Code, which imports AGENTS.md |
+
+Agent-specific project files you may still want: `.cursor/rules/*.mdc` (Cursor, needs frontmatter), `.github/copilot-instructions.md`, `.windsurf/rules/`, `.kiro/steering/`.
+
+---
+
+## What's agent-exclusive
+
+| Feature | Available for |
+|---|---|
+| GSD `/gsd-*` commands, agents, hooks from this repo | Cursor. Claude Code users get GSD from the upstream `get-shit-done` package |
+| Claude Code plugins (Impeccable, frontend-design, UI UX Pro Max, Understand-Anything, oh-my-mermaid, Superpowers) | Claude Code. Other agents get the same skills via native installers or `npx skills` |
+| Everything else (skill packs, MCP, rules) | All agents above |
+
+---
+
+## Adding a new agent
+
+1. Add an entry to `AGENTS` in `scripts/lib/agents.mjs`. It needs:
+   - `skillsId`, the `npx skills -a` id (full list: [vercel-labs/skills](https://github.com/vercel-labs/skills#supported-agents))
+   - `skillsDir`
+   - a `detect()` function
+   - an `mcp` dialect
+   - a `rules` file
+2. Preview the result with `node scripts/lib/powerup.mjs all --agents <new-id> --dry-run`.

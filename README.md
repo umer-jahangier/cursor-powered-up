@@ -1,183 +1,141 @@
 # cursor-powered-up
 
-> **One clone. One install. Full AI power-up for Cursor, VS Code, and Antigravity.**
-> GSD (Get Shit Done) spec-driven workflows + agent memory + CodeGraph + MCP wiring + 1,400+ safe skills bundle.
+> **One clone. One install. The same AI power-up in every coding agent.**
+> Claude Code · Cursor · Codex CLI · Gemini CLI · Antigravity · GitHub Copilot · Windsurf/Devin · OpenCode · Kiro · Cline
+>
+> Covers design-taste and UI/UX skills, animation and 3D skills, data-flow visualization, MCP servers, agent memory, codebase graphs, and GSD spec-driven workflows.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Quick Start
 
 ```bash
-# macOS / Linux — interactive IDE selection
+# macOS / Linux
 git clone https://github.com/umer-jahangier/cursor-powered-up.git
 cd cursor-powered-up
-./scripts/install.sh
-```
-
-```bash
-# Non-interactive: install for specific IDE
-./scripts/install.sh --ide cursor --non-interactive
-./scripts/install.sh --ide vscode --non-interactive
-./scripts/install.sh --ide antigravity --non-interactive
-./scripts/install.sh --ide all --non-interactive --force
+./scripts/install.sh            # detects your agents and asks before installing
 ```
 
 ```powershell
-# Windows (PowerShell — run as your normal user, not admin)
+# Windows (PowerShell, as your normal user)
 git clone https://github.com/umer-jahangier/cursor-powered-up.git
 cd cursor-powered-up
 .\scripts\install.ps1
 ```
 
-The installer handles everything — see [what it does](#what-the-installer-does) below.
+Preview first, then pick exactly what you want:
 
-> **After install:** follow **[docs/POST-INSTALL.md](./docs/POST-INSTALL.md)** to set your GitHub PAT, start agentmemory, and optionally enable the [21st.dev MCP](./docs/POST-INSTALL.md#step-4--21stdev-mcp--ui-components).
+```bash
+./scripts/install.sh --dry-run                                   # show the plan, change nothing
+./scripts/install.sh --agents detected --non-interactive         # every agent found on this machine
+./scripts/install.sh --agents claude-code,cursor,codex --packs default,workflow --mcp all
+node scripts/lib/powerup.mjs status                              # what's detected / installed
+```
+
+> **After install:** follow **[docs/POST-INSTALL.md](./docs/POST-INSTALL.md)** to set your GitHub token, start agentmemory, and set up per-project rules.
 
 ---
 
-## Multi-IDE Support
+## What you get
 
-| IDE | What you get |
-|-----|-------------|
-| **Cursor** | Full stack: GSD commands + skills + MCP + memory + hooks |
-| **VS Code** (Copilot) | Skills + MCP (user-level) + memory — no GSD (Cursor-exclusive) |
-| **Antigravity** | Skills + MCP + memory — no GSD (Cursor-exclusive) |
+| Layer | What | Default |
+|-------|------|---------|
+| **Design taste** | Impeccable (primary) · Taste Skill · Anthropic frontend-design · UI UX Pro Max · ibelick ui-skills · Vercel web-design-guidelines | ✅ `ui-design` |
+| **Motion** | Emil Kowalski skills (13) · official GSAP skills (8) | ✅ `motion` |
+| **3D** | Three.js / React Three Fiber skill package (24) | ✅ `3d` |
+| **Data-flow visualization** | Understand-Anything (interactive API/service/data graph) · oh-my-mermaid (Mermaid data-flow docs) · Mermaid + C4 skills | ✅ `dataflow` |
+| **Workflow discipline** | Superpowers (brainstorm → plan → TDD → verify) · Anthropic webapp-testing / mcp-builder | opt-in `workflow` |
+| **MCP servers** | playwright · github · agentmemory · context7 · shadcn · chrome-devtools | ✅ `core` |
+| **More MCP** | next-devtools · deepwiki · excalidraw · figma · sentry · appmap | opt-in `--mcp all` |
+| **Global rules** | Design-skill precedence + "map the data flow first" | ✅ appended, never duplicated |
+| **Codebase graph + memory** | CodeGraph · GitNexus · agentmemory | ✅ |
+| **Bundled skills** | animation-designer · immersive-3d-web · gsd-for-cursor | ✅ |
+| **GSD workflows** | 27 `/gsd-*` commands | Cursor |
 
-### Interactive prompt
+Full catalog, install routes and the data-flow tool comparison: **[docs/SKILLS-AND-TOOLS.md](./docs/SKILLS-AND-TOOLS.md)**.
+
+### Supported agents
+
+| Agent | Skills | MCP | Global rules | GSD |
+|-------|:-----:|:---:|:-----:|:---:|
+| Claude Code | ✅ (plugins + skills) | ✅ via `claude mcp` | ✅ `~/.claude/CLAUDE.md` | upstream |
+| Cursor | ✅ | ✅ | per-project `AGENTS.md` | ✅ |
+| OpenAI Codex CLI | ✅ | ✅ `config.toml` | ✅ `~/.codex/AGENTS.md` | — |
+| Gemini CLI | ✅ | ✅ | ✅ `~/.gemini/GEMINI.md` | — |
+| Antigravity (IDE + `agy`) | ✅ | ✅ | ✅ `~/.gemini/GEMINI.md` | — |
+| GitHub Copilot (VS Code) | ✅ | ✅ | ✅ `~/.copilot/instructions/` | — |
+| Windsurf / Devin Desktop | ✅ | ✅ | ✅ `global_rules.md` | — |
+| OpenCode | ✅ | ✅ | ✅ | — |
+| Kiro | ✅ | ✅ | ✅ steering | — |
+| Cline | ✅ | in-app | per-project | — |
+
+Paths and config dialects for each agent: **[docs/IDE-PATHS.md](./docs/IDE-PATHS.md)**.
+
+---
+
+## How it works
 
 ```
-$ ./scripts/install.sh
-
-Which IDE(s) would you like to install for?
-
-  1) Cursor
-  2) VS Code (Copilot + MCP)
-  3) Antigravity
-  4) All
-
-  Select [1-4]:
+config/skill-packs.json ─┐
+config/mcp-servers.json ─┼──▶ scripts/lib/powerup.mjs ──▶ each agent, in its own format
+src/rules/*.md ──────────┤        ▲                         (skills dir · MCP JSON/TOML · rules file)
+src/skills/* ────────────┘        │
+                     scripts/lib/agents.mjs  (paths + dialects for 10 agents)
 ```
+
+For each skill and each agent, the first route that applies wins:
+
+1. **Claude Code plugin**, when one exists.
+2. **The upstream README's own installer**, e.g. `npx impeccable install` or `uipro init`.
+3. **`npx skills add`**, the universal fallback for 70+ agents.
+
+**Safety:** existing skills, MCP entries and rules text are never overwritten. Every edited config gets a one-time `*.powerup-backup` copy. `--force` re-installs skills and refreshes only the blocks this repo wrote.
 
 ### CLI flags
 
-| Flag | Description |
-|------|-------------|
-| `--ide cursor\|vscode\|antigravity\|all` | Target IDE(s) |
-| `--non-interactive` | Skip all prompts (requires `--ide`) |
-| `--force` | Overwrite existing installation |
-| `--gsd-only` | Only copy GSD files (Cursor only) |
-| `--powerup-only` | Only run power-up phases (skip GSD) |
+| Flag (bash) | PowerShell | Description |
+|-------------|-----------|-------------|
+| `--agents <spec>` | `-Agents` | `detected` (default) · `all` · comma list of ids |
+| `--packs <spec>` | `-Packs` | `default` · `all` · `none` · `ui-design,motion,3d,dataflow,workflow` |
+| `--mcp <spec>` | `-Mcp` | `core` (default) · `extra` · `all` · `none` · server names |
+| `--dry-run` | `-DryRun` | Print the plan; change nothing |
+| `--force` | `-Force` | Re-install skills/plugins; refresh this repo's rule blocks |
+| `--non-interactive` | — | No prompts (defaults to `--agents detected`) |
+| `--gsd-only` / `--powerup-only` | `-GsdOnly` / `-PowerupOnly` | GSD copy only / skip GSD copy |
+| `--ide cursor\|vscode\|antigravity\|all` | — | Legacy alias for `--agents` |
 
 ---
 
-## Power Stack
+## Per-project setup (any agent)
 
-`install.sh` installs the **core stack** automatically. The **full power** stack adds UI generation and requires your own API key — follow [docs/POST-INSTALL.md](./docs/POST-INSTALL.md) after the installer finishes.
+```bash
+node ~/path/to/cursor-powered-up/scripts/lib/powerup.mjs project-init --dir .
+```
 
-| Layer | Tool | Install | IDEs |
-|-------|------|---------|------|
-| Agent memory | agentmemory MCP | Auto | All |
-| Browser automation | Playwright MCP | Auto | All |
-| GitHub integration | GitHub MCP | Auto | All |
-| Codebase graph | CodeGraph + GitNexus | Auto | All |
-| Safe skills bundle | antigravity development,backend | Auto | All |
-| ui-ux-pro-max | Premium UI/UX skill | Auto | All |
-| animation-designer | Framer Motion, GSAP, R3F, Lenis, shaders | Auto | All |
-| immersive-3d-web | Scroll-scrubbed sequences, WebGL, glass shaders, Awwwards-style sites | Auto | All |
-| GSD workflows | 27 `/gsd-*` commands | Auto | **Cursor only** |
-| **21st.dev MCP** | **UI component generation** | **Post-install** | Cursor, VS Code |
-| **Framer Motion** | **Animation library** | **Per-project** | All |
+This writes a shared `AGENTS.md` (read by Codex, Cursor, Copilot, Windsurf, OpenCode, Antigravity and Kiro) and a `CLAUDE.md` containing `@AGENTS.md` for Claude Code. Every agent in the repo then follows the same design precedence and data-flow rules.
+
+To see how data moves through the app:
+
+```text
+/understand-dashboard      # Understand-Anything: interactive API → service → data graph
+/omm-scan                  # oh-my-mermaid: data-flow + architecture diagrams in .omm/
+```
 
 ---
 
-## What the Installer Does
-
-### Generic phases (all IDEs)
-
-| Phase | Action |
-|-------|--------|
-| 1 | Detect OS; check node 18+, npm, npx, git, python3 |
-| 2 | Set up `~/.npm-global` prefix (no sudo/admin) |
-| 3 | `npm install -g @agentmemory/agentmemory @colbymchenry/codegraph agnix` |
-| 4 | Shallow-clone reference repos to `~/.cursor/repos/` |
-| 5 | Install / verify `gitnexus` |
-
-### Cursor-specific phases
-
-| Phase | Action |
-|-------|--------|
-| C1 | Copy GSD commands, agents, workflows, templates, references, hooks to `~/.cursor/` |
-| C2 | `agentmemory connect cursor` |
-| C3 | Ensure `playwright` + `github` in `~/.cursor/mcp.json` |
-| C4 | `npx antigravity-awesome-skills --path ~/.cursor/skills --category development,backend --risk safe` |
-| C4b | Bundled skills: `gsd-for-cursor`, `animation-designer`, `immersive-3d-web`, … from `src/skills/` |
-
-### VS Code-specific phases
-
-| Phase | Action |
-|-------|--------|
-| V1 | `npx antigravity-awesome-skills --path ~/.vscode/skills --category development,backend --risk safe` |
-| V2 | Write MCP config (agentmemory, playwright, github) to user-level `mcp.json` |
-
-### Antigravity-specific phases
-
-| Phase | Action |
-|-------|--------|
-| A1 | `npx antigravity-awesome-skills --path ~/.agents/skills --category development,backend --risk safe` |
-| A2 | `agentmemory connect antigravity` |
-| A3 | Ensure `playwright` + `github` in Antigravity `mcp_config.json` |
-
----
-
-## Still Manual (cannot be automated without asking)
-
-1. **Add to `~/.zshrc`** (Mac/Linux) then `source ~/.zshrc`:
-   ```bash
-   export PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$PATH"
-   export GITHUB_PERSONAL_ACCESS_TOKEN=ghp_your_token_here
-   ```
-2. **Every coding session** — run `agentmemory` in a terminal (keep it open).
-3. **Restart your IDE** after first install.
-4. **21st.dev MCP** — required for full UI power:
-   ```bash
-   # Cursor
-   npx -y @21st-dev/cli@latest install cursor --api-key "YOUR_KEY"
-   # VS Code
-   npx -y @21st-dev/cli@latest install vscode --api-key "YOUR_KEY"
-   ```
-5. **Framer Motion** — install per React project:
-   ```bash
-   npm install framer-motion
-   ```
-
-See the full walkthrough in **[docs/POST-INSTALL.md](./docs/POST-INSTALL.md)**.
-
----
-
-## Cursor Power-Up Integration (Cursor-exclusive)
-
-| Command | What it does |
-|---------|-------------|
-| `/gsd-new-project` | CodeGraph + GitNexus + `.cursor/rules/` bootstrap |
-| `/gsd-map-codebase` | Bootstrap brownfield project |
-| `/gsd-execute-phase N` | Execute plan + auto re-index |
-| `/gsd-help` | See all 27 commands |
-
-> **Note:** GSD slash commands are Cursor-exclusive. VS Code and Antigravity get the full skills + MCP + memory stack but not GSD workflows.
-
----
-
-## GSD Commands Overview (Cursor only)
+## GSD Commands (Cursor)
 
 ```
-/gsd-new-project        # Phase 1.5 bootstrap + questioning → research → requirements → roadmap
-/gsd-map-codebase       # Map existing codebase
-/gsd-discuss-phase N    # Capture implementation decisions
-/gsd-plan-phase N       # Create executable plans
-/gsd-execute-phase N    # Execute plans with atomic commits
-/gsd-verify-work N      # User acceptance testing
-/gsd-help               # Full command list
+/gsd-new-project        # bootstrap + questioning → research → requirements → roadmap
+/gsd-map-codebase       # map an existing codebase (CodeGraph + GitNexus)
+/gsd-discuss-phase N    # capture implementation decisions
+/gsd-plan-phase N       # create executable plans
+/gsd-execute-phase N    # execute plans with atomic commits + auto re-index
+/gsd-verify-work N      # user acceptance testing
+/gsd-help               # full command list
 ```
+
+Claude Code users: GSD is available natively from the upstream [get-shit-done](https://github.com/glittercowboy/get-shit-done) package.
 
 ---
 
@@ -193,10 +151,11 @@ See the full walkthrough in **[docs/POST-INSTALL.md](./docs/POST-INSTALL.md)**.
 
 | Document | Description |
 |----------|-------------|
-| [docs/POST-INSTALL.md](./docs/POST-INSTALL.md) | **Post-install guide** — PAT, agentmemory, 21st.dev MCP, project bootstrap |
-| [docs/IDE-PATHS.md](./docs/IDE-PATHS.md) | **Multi-IDE paths reference** — skills dirs, MCP configs per IDE |
+| [docs/POST-INSTALL.md](./docs/POST-INSTALL.md) | Post-install steps: tokens, agentmemory, 21st.dev, per-project rules, verification |
+| [docs/SKILLS-AND-TOOLS.md](./docs/SKILLS-AND-TOOLS.md) | Every skill, MCP server and tool, how it's installed, and how to add your own |
+| [docs/IDE-PATHS.md](./docs/IDE-PATHS.md) | Skills / MCP / rules paths and dialects for each agent |
 | [docs/PORTABLE-SETUP.md](./docs/PORTABLE-SETUP.md) | New machine restore guide |
-| [docs/GSD-CURSOR-ADAPTATION.md](./docs/GSD-CURSOR-ADAPTATION.md) | Technical adaptation details |
+| [docs/GSD-CURSOR-ADAPTATION.md](./docs/GSD-CURSOR-ADAPTATION.md) | GSD → Cursor adaptation details |
 | [CHANGELOG.md](./CHANGELOG.md) | Version history |
 | [MIGRATION.md](./MIGRATION.md) | Updating from upstream GSD |
 
@@ -206,6 +165,7 @@ See the full walkthrough in **[docs/POST-INSTALL.md](./docs/POST-INSTALL.md)**.
 
 - Original GSD system: [glittercowboy/get-shit-done](https://github.com/glittercowboy/get-shit-done)
 - Cursor adaptation: Royi Mindel
+- Skills by their authors: Paul Bakaus (Impeccable), Leonxlnx (Taste Skill), Anthropic, nextlevelbuilder, Emil Kowalski, GreenSock, Impertio Studio, ibelick, Vercel, Egonex-AI, oh-my-mermaid, softaworks, Jesse Vincent (Superpowers)
 - Power-up packaging: cursor-powered-up
 
 MIT License — see [LICENSE](./LICENSE).
